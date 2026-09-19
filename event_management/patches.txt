@@ -14,5 +14,6 @@
  event_management.patches.drop_event_name_unique_index
  event_management.patches.consolidate_divisions
  event_management.patches.create_event_confirmation_role
+ event_management.patches.add_trainer_documents_field
 
 

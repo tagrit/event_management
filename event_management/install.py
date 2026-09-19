@@ -16,6 +16,7 @@ def after_install():
 
     from event_management.patches import (
         add_event_trainer_linking_fields,
+        add_trainer_documents_field,
         add_trainer_management_fields,
         create_attendance_confirmation_email_template,
         create_default_settings,
@@ -34,6 +35,7 @@ def after_install():
         create_event_confirmation_role,
         add_trainer_management_fields,
         add_event_trainer_linking_fields,
+        add_trainer_documents_field,
         increase_max_upload_file_size,
         drop_event_name_unique_index,
     )

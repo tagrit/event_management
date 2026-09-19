@@ -30,17 +30,36 @@ def _get_file_as_base64(file_url):
         return ""
 
 
+MAX_TRAINERS_PER_EVENT = 2
+
+
 class EventTrainer(Document):
     def validate(self):
         """Validation before saving"""
         if not self.trainer:
             frappe.throw("Please select a trainer")
-        
+
         if self.training_start_date and self.training_end_date:
             if getdate(self.training_end_date) < getdate(self.training_start_date):
                 frappe.throw("Training end date cannot be before start date")
-        
+
+        self.validate_trainer_count()
+
         self.calculate_total_amount()
+
+    def validate_trainer_count(self):
+        if not self.event_registration:
+            return
+
+        existing_count = frappe.db.count(
+            "Event Trainer",
+            {"event_registration": self.event_registration, "name": ["!=", self.name or ""]}
+        )
+        if existing_count >= MAX_TRAINERS_PER_EVENT:
+            frappe.throw(
+                f"This event already has {existing_count} trainer(s) assigned. "
+                f"An event can have at most {MAX_TRAINERS_PER_EVENT} trainers."
+            )
         
     def calculate_total_amount(self):
         """Calculate total payment based on rate type and duration"""

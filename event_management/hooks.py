@@ -133,6 +133,17 @@ after_migrate = "event_management.install.after_migrate"
 # ---------------
 # Hook on document methods and events
 
+doc_events = {
+    "Payment Entry": {
+        "on_submit": "event_management.event_management.doctype.event_trainer.event_trainer.update_trainer_payment_on_payment_submit",
+        "on_cancel": "event_management.event_management.doctype.event_trainer.event_trainer.update_trainer_payment_on_payment_cancel"
+    },
+    "Purchase Invoice": {
+        "on_submit": "event_management.event_management.doctype.event_trainer.event_trainer.update_trainer_payment_on_invoice_submit",
+        "on_cancel": "event_management.event_management.doctype.event_trainer.event_trainer.update_trainer_payment_on_invoice_cancel"
+    }
+}
+
 # doc_events = {
 # 	"*": {
 # 		"on_update": "method",
