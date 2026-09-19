@@ -506,52 +506,73 @@ def _generate_event_report_html(events, report_type="all"):
                 <p style="color: #666;">{subtitle}</p>
                 <hr>"""
 
+    # Group events by division so each department (e.g. ABA, DSAIC) gets its
+    # own clearly labeled section in the same email, instead of one
+    # undifferentiated list. Order within each group follows the original
+    # (chronological) order of `events`.
+    events_by_division = {}
+    division_order = []
     for event_summary in events:
-        event = frappe.get_doc("Event Registration", event_summary.name)
-        total = len(event.delegates)
-        confirmed = sum(1 for d in event.delegates if d.confirmed)
-        pending = total - confirmed
-        percentage = round((confirmed / total * 100) if total > 0 else 0, 1)
-        status_color = "#20639B" if event.all_confirmed else "#ff9800"
-        
-        days_until = (getdate(event.start_date) - getdate(nowdate())).days
-        days_text = f"{days_until} days away" if days_until > 0 else "Today" if days_until == 0 else f"{abs(days_until)} days ago"
+        full_event = frappe.get_doc("Event Registration", event_summary.name)
+        division = full_event.division or "Unassigned"
+        if division not in events_by_division:
+            events_by_division[division] = []
+            division_order.append(division)
+        events_by_division[division].append(full_event)
 
+    for division in division_order:
+        division_events = events_by_division[division]
         html += f"""
-        <div style="margin: 20px 0; border: 1px solid #eee; padding: 15px; border-radius: 8px;">
-            <h3 style="color: {status_color};">{event.event_name}</h3>
-            <p>
-                <strong>Organization:</strong> {event.organization_name} | 
-                <strong>Date:</strong> {formatdate(event.start_date)} to {formatdate(event.end_date)} 
-                <span style="color: #666;">({days_text})</span>
-            </p>
-            <p><strong>Venue:</strong> {event.event_venue}, {event.event_location}</p>
-            <p style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0;">
-                <strong>Confirmation Status:</strong> 
-                <span style="color: #20639B; font-weight: bold;">{confirmed} Confirmed</span> | 
-                <span style="color: #ff9800; font-weight: bold;">{pending} Pending</span> | 
-                <span style="color: #666; font-weight: bold;">{percentage}% Complete</span>
-            </p>
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                <tr style="background: #f8f9fa; border-bottom: 2px solid #eee;">
-                    <th style="padding: 8px; text-align: left;">Delegate</th>
-                    <th style="padding: 8px; text-align: left;">Email</th>
-                    <th style="padding: 8px; text-align: center;">Status</th>
-                    <th style="padding: 8px; text-align: center;">Confirmed On</th>
-                </tr>"""
+        <h2 style="margin-top: 30px; padding-bottom: 6px; border-bottom: 2px solid #20639B; color: #20639B;">
+            {division} Report
+        </h2>
+        <p style="color: #666; margin: 4px 0 10px;">{len(division_events)} event(s)</p>"""
 
-        for d in event.delegates:
-            status = "✅ Confirmed" if d.confirmed else "⏳ Pending"
-            row_bg = "#f0fff4" if d.confirmed else "#fffaf0"
-            conf_date = formatdate(d.confirmation_date) if d.confirmation_date else "N/A"
-            html += f"""<tr style="background: {row_bg}; border-bottom: 1px solid #eee;">
-                        <td style="padding: 8px;">{d.first_name} {d.last_name}</td>
-                        <td style="padding: 8px;">{d.email}</td>
-                        <td style="padding: 8px; text-align: center;">{status}</td>
-                        <td style="padding: 8px; text-align: center;">{conf_date}</td>
+        for event in division_events:
+            total = len(event.delegates)
+            confirmed = sum(1 for d in event.delegates if d.confirmed)
+            pending = total - confirmed
+            percentage = round((confirmed / total * 100) if total > 0 else 0, 1)
+            status_color = "#20639B" if event.all_confirmed else "#ff9800"
+
+            days_until = (getdate(event.start_date) - getdate(nowdate())).days
+            days_text = f"{days_until} days away" if days_until > 0 else "Today" if days_until == 0 else f"{abs(days_until)} days ago"
+
+            html += f"""
+            <div style="margin: 20px 0; border: 1px solid #eee; padding: 15px; border-radius: 8px;">
+                <h3 style="color: {status_color};">{event.event_name}</h3>
+                <p>
+                    <strong>Organization:</strong> {event.organization_name} |
+                    <strong>Date:</strong> {formatdate(event.start_date)} to {formatdate(event.end_date)}
+                    <span style="color: #666;">({days_text})</span>
+                </p>
+                <p><strong>Venue:</strong> {event.event_venue}, {event.event_location}</p>
+                <p style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                    <strong>Confirmation Status:</strong>
+                    <span style="color: #20639B; font-weight: bold;">{confirmed} Confirmed</span> |
+                    <span style="color: #ff9800; font-weight: bold;">{pending} Pending</span> |
+                    <span style="color: #666; font-weight: bold;">{percentage}% Complete</span>
+                </p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #eee;">
+                        <th style="padding: 8px; text-align: left;">Delegate</th>
+                        <th style="padding: 8px; text-align: left;">Email</th>
+                        <th style="padding: 8px; text-align: center;">Status</th>
+                        <th style="padding: 8px; text-align: center;">Confirmed On</th>
                     </tr>"""
-        html += "</table></div>"
-    
+
+            for d in event.delegates:
+                status = "✅ Confirmed" if d.confirmed else "⏳ Pending"
+                row_bg = "#f0fff4" if d.confirmed else "#fffaf0"
+                conf_date = formatdate(d.confirmation_date) if d.confirmation_date else "N/A"
+                html += f"""<tr style="background: {row_bg}; border-bottom: 1px solid #eee;">
+                            <td style="padding: 8px;">{d.first_name} {d.last_name}</td>
+                            <td style="padding: 8px;">{d.email}</td>
+                            <td style="padding: 8px; text-align: center;">{status}</td>
+                            <td style="padding: 8px; text-align: center;">{conf_date}</td>
+                        </tr>"""
+            html += "</table></div>"
+
     html += "</div>"
     return html
 
