@@ -14,6 +14,14 @@ frappe.pages['trainer-profile'].on_page_show = function (wrapper) {
     }
 };
 
+function tp_escape(text) {
+    if (text === undefined || text === null) return '';
+    if (frappe.utils && typeof frappe.utils.escape_html === 'function') {
+        return frappe.utils.escape_html(text);
+    }
+    return $('<div>').text(text).html();
+}
+
 const PALETTE = {
     primary: '#1e3a8a',
     primaryLight: '#3b82f6',
@@ -89,14 +97,14 @@ class TrainerProfile {
         <div class="tp-card tp-header-card">
             <div class="tp-avatar">${initials}</div>
             <div class="tp-header-info">
-                <h2>${frappe.utils.escape_html(trainer.supplier_name)}</h2>
+                <h2>${tp_escape(trainer.supplier_name)}</h2>
                 <div class="tp-header-meta">
-                    ${trainer.area_of_expertise ? `<span class="tp-chip">${frappe.utils.escape_html(trainer.area_of_expertise)}</span>` : ''}
+                    ${trainer.area_of_expertise ? `<span class="tp-chip">${tp_escape(trainer.area_of_expertise)}</span>` : ''}
                     ${trainer.rate_type ? `<span class="tp-chip tp-chip-muted">${trainer.rate_type}${trainer.rate ? ' · ' + format_currency(trainer.rate, 'KES') : ''}</span>` : ''}
                 </div>
                 <div class="tp-contact-row">
-                    ${trainer.email ? `<span><i class="fa fa-envelope"></i> ${frappe.utils.escape_html(trainer.email)}</span>` : ''}
-                    ${trainer.mobile_no ? `<span><i class="fa fa-phone"></i> ${frappe.utils.escape_html(trainer.mobile_no)}</span>` : ''}
+                    ${trainer.email ? `<span><i class="fa fa-envelope"></i> ${tp_escape(trainer.email)}</span>` : ''}
+                    ${trainer.mobile_no ? `<span><i class="fa fa-phone"></i> ${tp_escape(trainer.mobile_no)}</span>` : ''}
                 </div>
             </div>
             ${trainer.cv_attachment ? `<a class="tp-cv-btn" href="${trainer.cv_attachment}" target="_blank"><i class="fa fa-file-text"></i> View CV</a>` : ''}
@@ -126,7 +134,7 @@ class TrainerProfile {
         const rows = (assignments || []).map(a => `
             <tr>
                 <td>
-                    <a href="/app/event-registration/${a.event_registration}">${frappe.utils.escape_html(a.event_name || a.event_registration)}</a>
+                    <a href="/app/event-registration/${a.event_registration}">${tp_escape(a.event_name || a.event_registration)}</a>
                     <div class="tp-subtext">${a.event_venue || ''}${a.event_venue && a.event_location ? ', ' : ''}${a.event_location || ''}</div>
                 </td>
                 <td class="tp-subtext">${frappe.datetime.str_to_user(a.event_start_date)}</td>
@@ -156,8 +164,8 @@ class TrainerProfile {
             <div class="tp-doc-row">
                 <i class="fa fa-file-o"></i>
                 <div class="tp-doc-info">
-                    <a href="${doc.file}" target="_blank">${frappe.utils.escape_html(doc.document_name || 'Document')}</a>
-                    ${doc.description ? `<div class="tp-subtext">${frappe.utils.escape_html(doc.description)}</div>` : ''}
+                    <a href="${doc.file}" target="_blank">${tp_escape(doc.document_name || 'Document')}</a>
+                    ${doc.description ? `<div class="tp-subtext">${tp_escape(doc.description)}</div>` : ''}
                 </div>
             </div>
         `).join('') || `<div class="tp-empty-row">No additional documents uploaded.</div>`;
@@ -179,7 +187,7 @@ class TrainerProfile {
             <tr>
                 <td>${row.date}</td>
                 <td><span class="tp-badge ${row.type === 'Payment' ? 'tp-badge-green' : 'tp-badge-muted'}">${row.type}</span></td>
-                <td>${frappe.utils.escape_html(row.description || '')}</td>
+                <td>${tp_escape(row.description || '')}</td>
                 <td class="${row.amount < 0 ? 'tp-amount-neg' : 'tp-amount-pos'}">${row.amount < 0 ? '-' : ''}${format_currency(Math.abs(row.amount), 'KES')}</td>
                 <td><strong>${format_currency(row.balance, 'KES')}</strong></td>
             </tr>
