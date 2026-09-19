@@ -18,6 +18,7 @@ def after_install():
         add_event_trainer_linking_fields,
         add_trainer_documents_field,
         add_trainer_management_fields,
+        add_trainer_only_supplier_view,
         create_attendance_confirmation_email_template,
         create_default_settings,
         create_event_confirmation_role,
@@ -36,6 +37,7 @@ def after_install():
         add_trainer_management_fields,
         add_event_trainer_linking_fields,
         add_trainer_documents_field,
+        add_trainer_only_supplier_view,
         increase_max_upload_file_size,
         drop_event_name_unique_index,
     )
