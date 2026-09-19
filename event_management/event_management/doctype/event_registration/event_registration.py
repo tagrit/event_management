@@ -8,7 +8,7 @@ import base64
 from frappe import _
 import os
 import re
-from datetime import timedelta
+from event_management.event_management.schedule_utils import schedule_is_due
 
 
 def get_cc_email_list(settings):
@@ -752,46 +752,64 @@ def trigger_automated_wednesday_report():
     )
 
 
+def _run_if_schedule_due(settings, enabled_field, day_field, time_field, last_run_field, default_day, action):
+    """Shared wiring between a Setting doc's schedule fields and the pure
+    schedule_is_due() check: checks whether the named schedule is due right
+    now, runs `action()` if so, and records the run so it doesn't fire again
+    today."""
+    if not settings.get(enabled_field):
+        return
+
+    time_value = settings.get(time_field)
+    if not time_value:
+        return
+
+    now_dt = get_datetime(now())
+    scheduled_day = settings.get(day_field) or default_day
+    scheduled_time = get_time(time_value)
+    last_run_value = settings.get(last_run_field)
+
+    if not schedule_is_due(now_dt, scheduled_day, scheduled_time, last_run_value):
+        return
+
+    action()
+
+    frappe.db.set_value("Event Management Setting", None, last_run_field, str(getdate(now_dt)))
+    frappe.db.commit()
+
+
 @frappe.whitelist()
 def check_and_run_scheduled_welcome_emails():
     """Runs frequently (see hooks.py cron). Only actually dispatches once, on the
     day/time configured on Event Management Setting, so the schedule can be
     changed from the Setting page without touching code or restarting anything."""
     settings = frappe.get_doc("Event Management Setting")
-
-    if not settings.get("welcome_email_schedule_enabled"):
-        return
-
-    scheduled_day = settings.get("welcome_email_day") or "Thursday"
-    if not settings.get("welcome_email_time"):
-        return
-
-    now_dt = get_datetime(now())
-    if now_dt.strftime("%A") != scheduled_day:
-        return
-
-    scheduled_time = get_time(settings.welcome_email_time)
-    scheduled_dt = now_dt.replace(
-        hour=scheduled_time.hour,
-        minute=scheduled_time.minute,
-        second=0,
-        microsecond=0
+    _run_if_schedule_due(
+        settings,
+        enabled_field="welcome_email_schedule_enabled",
+        day_field="welcome_email_day",
+        time_field="welcome_email_time",
+        last_run_field="welcome_email_last_run",
+        default_day="Thursday",
+        action=_run_confirmed_welcome_email_batch
     )
 
-    # Fire once, in the window starting at the scheduled time (covers the
-    # gap until the next cron tick, e.g. up to 15 minutes - see hooks.py).
-    window = timedelta(minutes=15)
-    if not (scheduled_dt <= now_dt < scheduled_dt + window):
-        return
 
-    today_str = str(getdate(now_dt))
-    if settings.get("welcome_email_last_run") == today_str:
-        return  # already ran for this scheduled slot today
-
-    _run_confirmed_welcome_email_batch()
-
-    frappe.db.set_value("Event Management Setting", None, "welcome_email_last_run", today_str)
-    frappe.db.commit()
+@frappe.whitelist()
+def check_and_run_scheduled_reminders():
+    """Runs frequently (see hooks.py cron). Only actually dispatches once, on the
+    day/time configured on Event Management Setting, so the schedule can be
+    changed from the Setting page without touching code or restarting anything."""
+    settings = frappe.get_doc("Event Management Setting")
+    _run_if_schedule_due(
+        settings,
+        enabled_field="reminder_email_schedule_enabled",
+        day_field="reminder_email_day",
+        time_field="reminder_email_time",
+        last_run_field="reminder_email_last_run",
+        default_day="Monday",
+        action=send_automated_reminders
+    )
 
 
 def _run_confirmed_welcome_email_batch():

@@ -164,14 +164,12 @@ after_migrate = "event_management.install.after_migrate"
 
 scheduler_events = {
     "cron": {
-        "0 9 * * 1": [
-            "event_management.event_management.doctype.event_registration.event_registration.send_automated_reminders"
-        ],
         "0 9 * * 3": [
             "event_management.event_management.doctype.event_registration.event_registration.trigger_automated_wednesday_report"
         ],
         "*/15 * * * *": [
-            "event_management.event_management.doctype.event_registration.event_registration.check_and_run_scheduled_welcome_emails"
+            "event_management.event_management.doctype.event_registration.event_registration.check_and_run_scheduled_welcome_emails",
+            "event_management.event_management.doctype.event_registration.event_registration.check_and_run_scheduled_reminders"
         ]
     }
 }

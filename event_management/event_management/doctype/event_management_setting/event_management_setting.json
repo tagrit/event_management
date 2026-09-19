@@ -19,7 +19,13 @@
   "welcome_email_day",
   "column_break_wesd",
   "welcome_email_time",
-  "welcome_email_last_run"
+  "welcome_email_last_run",
+  "reminder_email_schedule_section",
+  "reminder_email_schedule_enabled",
+  "reminder_email_day",
+  "column_break_resd",
+  "reminder_email_time",
+  "reminder_email_last_run"
  ],
  "fields": [
   {
@@ -98,6 +104,42 @@
   },
   {
    "fieldname": "welcome_email_last_run",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Last Run (auto-tracked, do not edit)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reminder_email_schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Automated Reminder Email Schedule"
+  },
+  {
+   "default": "1",
+   "description": "When enabled, delegates who haven't confirmed yet for an event starting 7-13 days out get an automatic reminder on the day/time below.",
+   "fieldname": "reminder_email_schedule_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Automated Reminder Email"
+  },
+  {
+   "default": "Monday",
+   "fieldname": "reminder_email_day",
+   "fieldtype": "Select",
+   "label": "Day",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
+  },
+  {
+   "fieldname": "column_break_resd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "09:00:00",
+   "fieldname": "reminder_email_time",
+   "fieldtype": "Time",
+   "label": "Time"
+  },
+  {
+   "fieldname": "reminder_email_last_run",
    "fieldtype": "Date",
    "hidden": 1,
    "label": "Last Run (auto-tracked, do not edit)",
