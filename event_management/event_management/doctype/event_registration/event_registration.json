@@ -63,6 +63,7 @@
   },
   {
    "fetch_from": "event_reference.event_name",
+   "columns": 6,
    "fieldname": "event_name",
    "fieldtype": "Small Text",
    "in_list_view": 1,
@@ -70,6 +71,7 @@
    "read_only": 1
   },
   {
+   "columns": 2,
    "fieldname": "event_location",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -78,6 +80,7 @@
    "reqd": 1
   },
   {
+   "columns": 2,
    "fieldname": "start_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -88,7 +91,6 @@
   {
    "fieldname": "number_of_delegates",
    "fieldtype": "Int",
-   "in_list_view": 1,
    "label": "Number of Delegates",
    "reqd": 1
   },

@@ -4,8 +4,44 @@ frappe.listview_settings['Event Registration'] = {
         listview.page.add_inner_button(__('This Month'), () => apply_period_filter(listview, 'month'), __('Filter By Period'));
         listview.page.add_inner_button(__('This Year'), () => apply_period_filter(listview, 'year'), __('Filter By Period'));
         listview.page.add_inner_button(__('Clear Period'), () => clear_period_filter(listview), __('Filter By Period'));
+
+        inject_event_name_styles();
+    },
+    formatters: {
+        event_name: function (value) {
+            const safe_value = escape_html_safe(value || '');
+            return `<span class="event-name-cell" title="${safe_value}">${safe_value}</span>`;
+        }
     }
 };
+
+function escape_html_safe(text) {
+    if (frappe.utils && typeof frappe.utils.escape_html === 'function') {
+        return frappe.utils.escape_html(text);
+    }
+    return $('<div>').text(text).html();
+}
+
+function inject_event_name_styles() {
+    if (document.getElementById('event-registration-list-styles')) return;
+
+    $(`<style id="event-registration-list-styles">
+        /* Event Name is long, so let its column wrap onto multiple lines
+           instead of being cut off with "..." like the other columns. */
+        .list-row-col:has(.event-name-cell) {
+            overflow: visible !important;
+            text-overflow: clip !important;
+            white-space: normal !important;
+        }
+        .event-name-cell {
+            display: block;
+            font-size: 11px;
+            line-height: 1.3;
+            white-space: normal;
+            word-break: break-word;
+        }
+    </style>`).appendTo('head');
+}
 
 function get_period_range(period) {
     const today = new Date();
