@@ -55,6 +55,14 @@ class EventRegistration(Document):
             if not delegate.confirmation_token:
                 delegate.confirmation_token = self.generate_confirmation_token(delegate.email)
 
+            # Track who actually confirmed each delegate: the logged-in user for a
+            # manual desk confirmation, or "Guest" when the delegate self-confirmed
+            # via the emailed link (that endpoint runs with allow_guest=True).
+            if delegate.confirmed and not delegate.confirmed_by:
+                delegate.confirmed_by = frappe.session.user
+            elif not delegate.confirmed:
+                delegate.confirmed_by = None
+
         self.update_all_confirmed_status()
         
     def before_insert(self):

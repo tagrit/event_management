@@ -13,7 +13,8 @@
   "column_break_yezv",
   "phone",
   "confirmed",
-  "confirmation_date"
+  "confirmation_date",
+  "confirmed_by"
  ],
  "fields": [
   {
@@ -55,14 +56,28 @@
    "fieldname": "confirmed",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Confirmed"
+   "label": "Confirmed",
+   "permlevel": 1
   },
   {
    "allow_on_submit": 1,
    "fieldname": "confirmation_date",
    "fieldtype": "Datetime",
    "in_list_view": 1,
-   "label": "Confirmation Date"
+   "label": "Confirmation Date",
+   "permlevel": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Set automatically. \"Guest\" means the delegate confirmed themselves via the email link.",
+   "fieldname": "confirmed_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Confirmed By",
+   "options": "User",
+   "permlevel": 1,
+   "read_only": 1
   },
   {
    "fieldname": "confirmation_token",
@@ -81,7 +96,19 @@
  "module": "Event Management",
  "name": "Event Delegate",
  "owner": "Administrator",
- "permissions": [],
+ "permissions": [
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Event Confirmation Officer",
+   "write": 1
+  }
+ ],
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",

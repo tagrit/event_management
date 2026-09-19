@@ -245,9 +245,11 @@
   {
    "allow_on_submit": 1,
    "default": "0",
+   "description": "Computed automatically from each delegate's Confirmed status. Not editable directly.",
    "fieldname": "all_confirmed",
    "fieldtype": "Check",
-   "label": "All Confirmed"
+   "label": "All Confirmed",
+   "read_only": 1
   },
   {
    "fieldname": "delegates_section",
@@ -326,6 +328,13 @@
    "share": 1,
    "submit": 1,
    "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Confirmation Officer"
   }
  ],
  "row_format": "Dynamic",
