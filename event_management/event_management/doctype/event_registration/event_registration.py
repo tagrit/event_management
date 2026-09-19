@@ -1,13 +1,14 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import getdate, add_days, now, get_datetime, nowdate, formatdate, get_url, validate_email_address
+from frappe.utils import getdate, add_days, now, get_datetime, nowdate, formatdate, get_url, validate_email_address, get_time
 from frappe.utils.pdf import get_pdf
 import hashlib
 import json
 import base64
-from frappe import _  
+from frappe import _
 import os
 import re
+from datetime import timedelta
 
 
 def get_cc_email_list(settings):
@@ -723,9 +724,50 @@ def trigger_automated_wednesday_report():
 
 
 @frappe.whitelist()
-def trigger_automated_thursday_welcome_emails():
-    """Auto-dispatch the confirmed-delegate welcome email every Thursday at 2 PM
-    for any submitted, fully-confirmed event that hasn't had it sent yet."""
+def check_and_run_scheduled_welcome_emails():
+    """Runs frequently (see hooks.py cron). Only actually dispatches once, on the
+    day/time configured on Event Management Setting, so the schedule can be
+    changed from the Setting page without touching code or restarting anything."""
+    settings = frappe.get_doc("Event Management Setting")
+
+    if not settings.get("welcome_email_schedule_enabled"):
+        return
+
+    scheduled_day = settings.get("welcome_email_day") or "Thursday"
+    if not settings.get("welcome_email_time"):
+        return
+
+    now_dt = get_datetime(now())
+    if now_dt.strftime("%A") != scheduled_day:
+        return
+
+    scheduled_time = get_time(settings.welcome_email_time)
+    scheduled_dt = now_dt.replace(
+        hour=scheduled_time.hour,
+        minute=scheduled_time.minute,
+        second=0,
+        microsecond=0
+    )
+
+    # Fire once, in the window starting at the scheduled time (covers the
+    # gap until the next cron tick, e.g. up to 15 minutes - see hooks.py).
+    window = timedelta(minutes=15)
+    if not (scheduled_dt <= now_dt < scheduled_dt + window):
+        return
+
+    today_str = str(getdate(now_dt))
+    if settings.get("welcome_email_last_run") == today_str:
+        return  # already ran for this scheduled slot today
+
+    _run_confirmed_welcome_email_batch()
+
+    frappe.db.set_value("Event Management Setting", None, "welcome_email_last_run", today_str)
+    frappe.db.commit()
+
+
+def _run_confirmed_welcome_email_batch():
+    """Send the confirmed-delegate welcome email for every submitted,
+    fully-confirmed event that hasn't had it sent yet."""
     events_to_process = frappe.get_all(
         "Event Registration",
         filters={
@@ -737,18 +779,18 @@ def trigger_automated_thursday_welcome_emails():
     )
 
     if not events_to_process:
-        frappe.log_error("No confirmed events pending a welcome email", "Thursday Welcome Email - No Events")
+        frappe.log_error("No confirmed events pending a welcome email", "Scheduled Welcome Email - No Events")
         return
 
     for e in events_to_process:
         try:
             send_welcome_email_to_confirmed(e.name)
         except Exception:
-            frappe.log_error(frappe.get_traceback(), f"Thursday Welcome Email Failed for {e.name}")
+            frappe.log_error(frappe.get_traceback(), f"Scheduled Welcome Email Failed for {e.name}")
 
     frappe.log_error(
-        f"Thursday welcome email run processed {len(events_to_process)} event(s)",
-        "Thursday Welcome Email Success"
+        f"Scheduled welcome email run processed {len(events_to_process)} event(s)",
+        "Scheduled Welcome Email Success"
     )
 
 

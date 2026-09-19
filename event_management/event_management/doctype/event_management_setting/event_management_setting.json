@@ -13,7 +13,13 @@
   "column_break_sdnt",
   "calendar_link",
   "company_logo",
-  "company_stamp"
+  "company_stamp",
+  "welcome_email_schedule_section",
+  "welcome_email_schedule_enabled",
+  "welcome_email_day",
+  "column_break_wesd",
+  "welcome_email_time",
+  "welcome_email_last_run"
  ],
  "fields": [
   {
@@ -60,6 +66,42 @@
    "fieldname": "company_stamp",
    "fieldtype": "Attach Image",
    "label": "Company Stamp"
+  },
+  {
+   "fieldname": "welcome_email_schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Automated Welcome Email Schedule"
+  },
+  {
+   "default": "1",
+   "description": "When enabled, the confirmed-delegate welcome email is sent automatically on the day/time below for any submitted, fully-confirmed event that hasn't had it sent yet.",
+   "fieldname": "welcome_email_schedule_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Automated Welcome Email"
+  },
+  {
+   "default": "Thursday",
+   "fieldname": "welcome_email_day",
+   "fieldtype": "Select",
+   "label": "Day",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
+  },
+  {
+   "fieldname": "column_break_wesd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "14:00:00",
+   "fieldname": "welcome_email_time",
+   "fieldtype": "Time",
+   "label": "Time"
+  },
+  {
+   "fieldname": "welcome_email_last_run",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Last Run (auto-tracked, do not edit)",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
