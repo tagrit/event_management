@@ -14,6 +14,7 @@ def execute():
         return
 
     hide_when_trainer = [
+        "naming_series",  # so Supplier Name is the first field trainers see
         "tax_tab",
         "contact_and_address_tab",
         "accounting_tab",
