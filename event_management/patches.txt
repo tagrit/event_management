@@ -12,5 +12,6 @@
  event_management.patches.backfill_event_reference_field
  event_management.patches.increase_max_upload_file_size
  event_management.patches.drop_event_name_unique_index
+ event_management.patches.consolidate_divisions
 
 
