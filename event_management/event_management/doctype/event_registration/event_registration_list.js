@@ -25,20 +25,13 @@ function escape_html_safe(text) {
 function inject_event_name_styles() {
     if (document.getElementById('event-registration-list-styles')) return;
 
+    // Smaller font only - the row height is fixed, so forcing the text to
+    // wrap onto multiple lines overflows into the row above/below it.
+    // Single-line with a smaller font fits noticeably more of the name
+    // without breaking the row layout.
     $(`<style id="event-registration-list-styles">
-        /* Event Name is long, so let its column wrap onto multiple lines
-           instead of being cut off with "..." like the other columns. */
-        .list-row-col:has(.event-name-cell) {
-            overflow: visible !important;
-            text-overflow: clip !important;
-            white-space: normal !important;
-        }
         .event-name-cell {
-            display: block;
             font-size: 11px;
-            line-height: 1.3;
-            white-space: normal;
-            word-break: break-word;
         }
     </style>`).appendTo('head');
 }
