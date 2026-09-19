@@ -325,6 +325,11 @@
         <!-- Banner Title -->
         <div class="contract-banner">
             Service Commitment Letter
+            {% if signature_base64 %}
+            <div style="font-size: 9pt; font-weight: 600; letter-spacing: 0.5px; margin-top: 4px; text-transform: none;">
+                ✓ Digitally Signed{% if signed_date %} on {{ signed_date }}{% endif %}
+            </div>
+            {% endif %}
         </div>
 
         <!-- Service Commitment Details -->
@@ -401,12 +406,20 @@
                     
                     <td class="signature-block">
                         <div class="signature-label">Signature</div>
+                        {% if signature_base64 %}
+                        <img src="data:image/png;base64,{{ signature_base64 }}" style="max-height: 45px; max-width: 100%;" alt="Signature">
+                        {% else %}
                         <div class="signature-line"></div>
+                        {% endif %}
                     </td>
-                    
+
                     <td class="signature-block">
                         <div class="signature-label">Date</div>
+                        {% if signed_date %}
+                        <div class="signature-field">{{ signed_date }}</div>
+                        {% else %}
                         <div class="signature-line"></div>
+                        {% endif %}
                     </td>
                 </tr>
             </table>

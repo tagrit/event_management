@@ -122,44 +122,60 @@ class EventTrainer(Document):
         self.db_set('payment_status', status, update_modified=False)
 
 
+def build_contract_template_args(trainer_doc, signature_base64=None):
+    """Shared template context for the contract PDF, used both when emailing
+    it and when rendering/regenerating it from the public signing page."""
+    event = frappe.get_doc("Event Registration", trainer_doc.event_registration)
+    trainer = frappe.get_doc("Supplier", trainer_doc.trainer)
+
+    return {
+        "trainer": trainer,
+        "event": event,
+        "trainer_assignment": trainer_doc,
+        "event_date": f"{formatdate(event.start_date, 'dd MMM yyyy')} to {formatdate(event.end_date, 'dd MMM yyyy')}",
+        "location": f"{event.event_venue}, {event.event_location}",
+        "contract_date": formatdate(now(), 'dd MMM yyyy'),
+        "total_amount": trainer_doc.total_amount,
+        "rate_details": f"{trainer_doc.rate_type}: {frappe.format_value(trainer_doc.agreed_rate, 'Currency')}",
+        "signature_base64": signature_base64,
+        "signed_date": formatdate(trainer_doc.contract_signed_date, 'dd MMM yyyy') if trainer_doc.contract_signed_date else None
+    }
+
+
 @frappe.whitelist()
 def send_trainer_contract(event_trainer_name):
-    """Send contract to trainer via email"""
+    """Send contract to trainer via email, with a public link they can use
+    to sign it digitally without needing a login."""
     if not event_trainer_name:
         frappe.throw("Event Trainer record not found")
-    
+
     try:
         trainer_doc = frappe.get_doc("Event Trainer", event_trainer_name)
-        event = frappe.get_doc("Event Registration", trainer_doc.event_registration)
-        trainer = frappe.get_doc("Supplier", trainer_doc.trainer)
-        
+
         trainer_email = trainer_doc.email
         if not trainer_email:
             frappe.throw(f"No email address found for trainer {trainer_doc.trainer_name}. Please update the Event Trainer record.")
-        
-        template_args = {
-            "trainer": trainer,
-            "event": event,
-            "trainer_assignment": trainer_doc,
-            "event_date": f"{formatdate(event.start_date, 'dd MMM yyyy')} to {formatdate(event.end_date, 'dd MMM yyyy')}",
-            "location": f"{event.event_venue}, {event.event_location}",
-            "contract_date": formatdate(now(), 'dd MMM yyyy'),
-            "total_amount": trainer_doc.total_amount,
-            "rate_details": f"{trainer_doc.rate_type}: {frappe.format_value(trainer_doc.agreed_rate, 'Currency')}"
-        }
-        
+
+        if not trainer_doc.signature_token:
+            trainer_doc.db_set('signature_token', frappe.generate_hash(length=32), update_modified=False)
+            trainer_doc.reload()
+
+        template_args = build_contract_template_args(trainer_doc)
+        signing_link = f"{get_url()}/trainer-sign?token={trainer_doc.signature_token}"
+        template_args["signing_link"] = signing_link
+
         contract_pdf = _generate_trainer_contract_pdf(template_args)
-        
+
         sender_email = None
         try:
             settings = frappe.get_doc("Event Management Setting")
             sender_email = settings.sender_email if hasattr(settings, 'sender_email') else None
         except Exception:
             pass
-        
+
         email_args = {
             "recipients": [trainer_email],
-            "subject": f"Training Contract - {event.event_name}",
+            "subject": f"Training Contract - {template_args['event'].event_name}",
             "message": _get_contract_email_body(template_args),
             "attachments": [{
                 "fname": f"Contract_{trainer_doc.trainer_name.replace(' ', '_')}_{event_trainer_name}.pdf",
@@ -167,24 +183,24 @@ def send_trainer_contract(event_trainer_name):
             }],
             "now": True
         }
-        
+
         if sender_email:
             email_args["sender"] = sender_email
-        
+
         frappe.sendmail(**email_args)
-        
+
         trainer_doc.db_set('contract_sent', 1, update_modified=True)
         trainer_doc.db_set('contract_sent_date', now(), update_modified=True)
-        
-        frappe.msgprint(f"✅ Contract sent successfully to {trainer.supplier_name} ({trainer_email})")
-        
+
+        frappe.msgprint(f"✅ Contract sent successfully to {template_args['trainer'].supplier_name} ({trainer_email})")
+
         return {
             "success": True,
             "message": f"Contract sent to {trainer_email}",
-            "trainer_name": trainer.supplier_name,
+            "trainer_name": template_args['trainer'].supplier_name,
             "email": trainer_email
         }
-        
+
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "Trainer Contract Send Failed")
         frappe.throw(f"Failed to send contract: {str(e)}")
@@ -323,11 +339,118 @@ def _get_contract_email_body(template_args):
             <p style="margin: 5px 0;"><strong>Payment:</strong> {template_args['rate_details']}</p>
             <p style="margin: 5px 0;"><strong>Total Amount:</strong> {frappe.format_value(template_args['total_amount'], 'Currency')}</p>
         </div>
-        <p>Please review the contract and sign it. You can send the signed copy along with your invoice to our accounts department.</p>
+        <p>Please review the attached contract, then sign it digitally using the button below - no printing, scanning, or account needed.</p>
+        <div style="text-align: center; margin: 25px 0;">
+            <a href="{template_args.get('signing_link', '#')}" style="background-color: #20639B; color: white; padding: 12px 28px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block;">
+                Sign Contract Online
+            </a>
+        </div>
+        <p style="font-size: 12px; color: #888;">If the button doesn't work, copy and paste this link into your browser:<br>{template_args.get('signing_link', '')}</p>
+        <p>Once signed, you can send your invoice to our accounts department.</p>
         <p>If you have any questions, please don't hesitate to contact us.</p>
         <p>Best regards,<br>Event Management Team</p>
     </div>
     """
+
+
+@frappe.whitelist(allow_guest=True)
+def get_contract_for_signing(token):
+    """Public (no login) lookup used by the /trainer-sign page to show the
+    trainer their contract details before they sign."""
+    if not token:
+        return {"success": False, "message": "Invalid signing link"}
+
+    trainer_doc = frappe.db.get_value("Event Trainer", {"signature_token": token}, "name")
+    if not trainer_doc:
+        return {"success": False, "message": "Invalid or expired signing link"}
+
+    trainer_doc = frappe.get_doc("Event Trainer", trainer_doc)
+
+    if trainer_doc.contract_signed:
+        return {
+            "success": True,
+            "already_signed": True,
+            "message": f"This contract was already signed on {formatdate(trainer_doc.contract_signed_date, 'dd MMM yyyy')}.",
+            "trainer_name": trainer_doc.trainer_name,
+            "event_name": trainer_doc.event_name
+        }
+
+    args = build_contract_template_args(trainer_doc)
+
+    return {
+        "success": True,
+        "already_signed": False,
+        "trainer_name": args["trainer"].supplier_name,
+        "event_name": args["event"].event_name,
+        "event_date": args["event_date"],
+        "location": args["location"],
+        "rate_details": args["rate_details"],
+        "total_amount": frappe.format_value(args["total_amount"], "Currency")
+    }
+
+
+@frappe.whitelist(allow_guest=True)
+def submit_signed_contract(token, signature_data):
+    """Public (no login) endpoint the /trainer-sign page posts the drawn
+    signature to. Regenerates the contract PDF with the signature embedded,
+    stores it against the Event Trainer record, and marks it signed."""
+    if not token or not signature_data:
+        return {"success": False, "message": "Missing signature"}
+
+    trainer_name = frappe.db.get_value("Event Trainer", {"signature_token": token}, "name")
+    if not trainer_name:
+        return {"success": False, "message": "Invalid or expired signing link"}
+
+    trainer_doc = frappe.get_doc("Event Trainer", trainer_name)
+
+    if trainer_doc.contract_signed:
+        return {"success": False, "message": "This contract has already been signed."}
+
+    try:
+        signature_base64 = signature_data.split(",")[-1]  # strip the data:image/png;base64, prefix
+
+        trainer_doc.db_set("contract_signed", 1, update_modified=False)
+        trainer_doc.db_set("contract_signed_date", now(), update_modified=False)
+        trainer_doc.reload()
+
+        template_args = build_contract_template_args(trainer_doc, signature_base64=signature_base64)
+        signed_pdf = _generate_trainer_contract_pdf(template_args)
+
+        file_doc = frappe.get_doc({
+            "doctype": "File",
+            "file_name": f"Signed_Contract_{trainer_doc.name}.pdf",
+            "attached_to_doctype": "Event Trainer",
+            "attached_to_name": trainer_doc.name,
+            "attached_to_field": "signed_contract",
+            "content": signed_pdf,
+            "is_private": 1
+        })
+        file_doc.insert(ignore_permissions=True)
+        trainer_doc.db_set("signed_contract", file_doc.file_url, update_modified=False)
+
+        frappe.db.commit()
+
+        admin_email = frappe.db.get_single_value("Event Management Setting", "admin_email") or "info@tagrit.com"
+        frappe.sendmail(
+            recipients=[admin_email, trainer_doc.email],
+            subject=f"Contract Signed - {trainer_doc.trainer_name} - {trainer_doc.event_name}",
+            message=f"""
+            <div style="font-family: Arial, sans-serif;">
+                <h2 style="color: #4CAF50;">✓ Contract Signed</h2>
+                <p><strong>{trainer_doc.trainer_name}</strong> has digitally signed the training contract for
+                <strong>{trainer_doc.event_name}</strong> on {formatdate(now(), 'dd MMM yyyy')}.</p>
+                <p>The signed contract is attached to the Event Trainer record ({trainer_doc.name}) in the system.</p>
+            </div>
+            """,
+            attachments=[{"fname": f"Signed_Contract_{trainer_doc.name}.pdf", "fcontent": signed_pdf}],
+            now=True
+        )
+
+        return {"success": True, "message": "Thank you! Your signed contract has been received."}
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Trainer Contract Signing Failed")
+        return {"success": False, "message": "Something went wrong saving your signature. Please try again or contact us."}
 
 
 @frappe.whitelist()

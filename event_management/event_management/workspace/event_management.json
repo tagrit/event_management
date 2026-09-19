@@ -1,7 +1,7 @@
 [
  {
   "charts": [],
-  "content": "[{\"id\":\"H-1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h5\\\"><b>EVENT OVERVIEW</b></span>\",\"col\":12}},{\"id\":\"S-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Draft Events\",\"col\":4}},{\"id\":\"S-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Confirmed\",\"col\":4}},{\"id\":\"S-3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Pending\",\"col\":4}},{\"id\":\"SP-1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"H-2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h6\\\"><b>Quick Access</b></span>\",\"col\":12}},{\"id\":\"C-1\",\"type\":\"card\",\"data\":{\"card_name\":\"Event Planning\",\"col\":4}},{\"id\":\"C-2\",\"type\":\"card\",\"data\":{\"card_name\":\"Delegates & Attendance\",\"col\":4}},{\"id\":\"C-3\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
+  "content": "[{\"id\":\"H-1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h5\\\"><b>EVENT OVERVIEW</b></span>\",\"col\":12}},{\"id\":\"S-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Draft Events\",\"col\":4}},{\"id\":\"S-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Confirmed\",\"col\":4}},{\"id\":\"S-3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Pending\",\"col\":4}},{\"id\":\"SP-1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"H-2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h6\\\"><b>Quick Access</b></span>\",\"col\":12}},{\"id\":\"C-1\",\"type\":\"card\",\"data\":{\"card_name\":\"Event Planning\",\"col\":4}},{\"id\":\"C-2\",\"type\":\"card\",\"data\":{\"card_name\":\"Delegates & Attendance\",\"col\":4}},{\"id\":\"C-4\",\"type\":\"card\",\"data\":{\"card_name\":\"Trainers & Suppliers\",\"col\":4}},{\"id\":\"C-3\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
   "docstatus": 0,
   "doctype": "Workspace",
   "icon": "calendar",
@@ -47,7 +47,7 @@
     "link_to": "event-dashboard",
     "link_type": "Page",
     "type": "Link"
-    },
+   },
    {
     "label": "Event Registration",
     "link_to": "Event Registration",
@@ -99,6 +99,18 @@
    {
     "label": "Fully Confirmed",
     "link_to": "Event Registration",
+    "link_type": "DocType",
+    "type": "Link"
+   },
+   {
+    "label": "Trainers & Suppliers",
+    "link_type": "DocType",
+    "type": "Card Break"
+   },
+   {
+    "description": "The trainer database. Use the \"Is Trainer\" quick filter to see only trainers among all suppliers.",
+    "label": "Trainers",
+    "link_to": "Supplier",
     "link_type": "DocType",
     "type": "Link"
    },

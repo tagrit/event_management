@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Sign Training Contract</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+            color: #1e293b;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .wrapper {
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        .banner {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 10px 10px 0 0;
+            text-align: center;
+        }
+
+        .banner h1 {
+            font-size: 18pt;
+            letter-spacing: 0.5px;
+        }
+
+        .banner p {
+            margin-top: 6px;
+            opacity: 0.9;
+            font-size: 10pt;
+        }
+
+        .card {
+            background: white;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 20px rgba(30, 58, 138, 0.08);
+            padding: 24px;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(30, 58, 138, 0.08);
+            padding: 40px 24px;
+            text-align: center;
+        }
+
+        .status-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 24px;
+        }
+
+        .details-table td {
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            font-size: 10.5pt;
+        }
+
+        .details-table td:first-child {
+            font-weight: 700;
+            background: #eff6ff;
+            color: #1e3a8a;
+            width: 40%;
+        }
+
+        .details-table tr:first-child td:first-child { border-radius: 6px 0 0 0; }
+        .details-table tr:first-child td:last-child { border-radius: 0 6px 0 0; }
+        .details-table tr:last-child td:first-child { border-radius: 0 0 0 6px; }
+        .details-table tr:last-child td:last-child { border-radius: 0 0 6px 0; }
+
+        .signature-label {
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-bottom: 8px;
+            font-size: 11pt;
+        }
+
+        .signature-hint {
+            font-size: 9.5pt;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 160px;
+            border: 2px dashed #94a3b8;
+            border-radius: 8px;
+            background: #f8fafc;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        button {
+            font-family: inherit;
+            font-size: 10.5pt;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .btn-clear {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-submit:hover { opacity: 0.92; }
+
+        .acknowledgement {
+            font-size: 9.5pt;
+            color: #475569;
+            margin: 16px 0;
+            line-height: 1.5;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 9pt;
+            color: #94a3b8;
+            margin-top: 18px;
+        }
+
+        #form-message {
+            margin-top: 14px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 10pt;
+            display: none;
+        }
+
+        #form-message.error { background: #fef2f2; color: #b91c1c; display: block; }
+        #form-message.success { background: #f0fdf4; color: #15803d; display: block; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        {% if not success %}
+        <div class="status-card">
+            <div class="status-icon">⚠️</div>
+            <h2>Link Not Valid</h2>
+            <p style="color: #64748b; margin-top: 10px;">{{ message }}</p>
+        </div>
+
+        {% elif already_signed %}
+        <div class="status-card">
+            <div class="status-icon">✅</div>
+            <h2>Already Signed</h2>
+            <p style="color: #64748b; margin-top: 10px;">{{ message }}</p>
+        </div>
+
+        {% else %}
+        <div class="banner">
+            <h1>Training Service Contract</h1>
+            <p>Please review and sign below</p>
+        </div>
+        <div class="card">
+            <table class="details-table">
+                <tr><td>Trainer</td><td>{{ trainer_name }}</td></tr>
+                <tr><td>Event</td><td>{{ event_name }}</td></tr>
+                <tr><td>Date</td><td>{{ event_date }}</td></tr>
+                <tr><td>Location</td><td>{{ location }}</td></tr>
+                <tr><td>Payment Terms</td><td>{{ rate_details }}</td></tr>
+                <tr><td>Total Amount</td><td><strong>{{ total_amount }}</strong> (Subject to 5% Withholding Tax)</td></tr>
+            </table>
+
+            <p class="acknowledgement">
+                By signing below, I, <strong>{{ trainer_name }}</strong>, confirm my agreement to deliver the training
+                described above under Capabuil Ltd's standard consultant terms (cancellation policy, quality &amp;
+                timeliness, and payment upon a valid invoice).
+            </p>
+
+            <div class="signature-label">Draw your signature</div>
+            <div class="signature-hint">Use your mouse or finger in the box below</div>
+            <canvas id="pad"></canvas>
+
+            <div class="actions">
+                <button type="button" class="btn-clear" id="clear-btn">Clear</button>
+                <button type="button" class="btn-submit" id="submit-btn">Sign &amp; Submit Contract</button>
+            </div>
+
+            <div id="form-message"></div>
+        </div>
+        <p class="footer-note">Capabuil Ltd &middot; Training Organization</p>
+        {% endif %}
+    </div>
+
+    {% if success and not already_signed %}
+    <script>
+        (function () {
+            const canvas = document.getElementById('pad');
+            const ctx = canvas.getContext('2d');
+            const clearBtn = document.getElementById('clear-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            const messageBox = document.getElementById('form-message');
+            let drawing = false;
+            let hasSignature = false;
+
+            function resizeCanvas() {
+                const ratio = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * ratio;
+                canvas.height = rect.height * ratio;
+                ctx.scale(ratio, ratio);
+                ctx.lineWidth = 2.2;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#1e293b';
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const point = e.touches ? e.touches[0] : e;
+                return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+            }
+
+            function start(e) {
+                e.preventDefault();
+                drawing = true;
+                hasSignature = true;
+                const pos = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+            }
+
+            function move(e) {
+                if (!drawing) return;
+                e.preventDefault();
+                const pos = getPos(e);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+            }
+
+            function end() { drawing = false; }
+
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', end);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', move, { passive: false });
+            canvas.addEventListener('touchend', end);
+
+            clearBtn.addEventListener('click', function () {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                hasSignature = false;
+                messageBox.style.display = 'none';
+            });
+
+            submitBtn.addEventListener('click', function () {
+                if (!hasSignature) {
+                    messageBox.className = 'error';
+                    messageBox.textContent = 'Please draw your signature before submitting.';
+                    messageBox.style.display = 'block';
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                clearBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
+
+                fetch('/api/method/event_management.event_management.doctype.event_trainer.event_trainer.submit_signed_contract', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: "{{ token }}",
+                        signature_data: canvas.toDataURL('image/png')
+                    })
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        const result = data.message || {};
+                        if (result.success) {
+                            messageBox.className = 'success';
+                            messageBox.textContent = result.message;
+                            submitBtn.textContent = 'Signed ✓';
+                            clearBtn.style.display = 'none';
+                        } else {
+                            messageBox.className = 'error';
+                            messageBox.textContent = result.message || 'Something went wrong. Please try again.';
+                            submitBtn.disabled = false;
+                            clearBtn.disabled = false;
+                            submitBtn.textContent = 'Sign & Submit Contract';
+                        }
+                    })
+                    .catch(function () {
+                        messageBox.className = 'error';
+                        messageBox.textContent = 'Network error. Please check your connection and try again.';
+                        submitBtn.disabled = false;
+                        clearBtn.disabled = false;
+                        submitBtn.textContent = 'Sign & Submit Contract';
+                    });
+            });
+        })();
+    </script>
+    {% endif %}
+</body>
+</html>

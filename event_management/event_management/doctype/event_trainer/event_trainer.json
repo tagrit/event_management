@@ -37,8 +37,12 @@
   "contract_status_section",
   "contract_sent",
   "contract_sent_date",
+  "contract_signed",
+  "contract_signed_date",
   "column_break_5",
   "payment_status",
+  "signature_token",
+  "signed_contract",
   "additional_info_section",
   "notes"
  ],
@@ -231,6 +235,21 @@
    "read_only": 1
   },
   {
+   "default": "0",
+   "fieldname": "contract_signed",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Contract Signed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "contract_signed_date",
+   "fieldtype": "Datetime",
+   "label": "Contract Signed Date",
+   "read_only": 1
+  },
+  {
    "fieldname": "column_break_5",
    "fieldtype": "Column Break"
   },
@@ -242,6 +261,20 @@
    "in_standard_filter": 1,
    "label": "Payment Status",
    "options": "Unpaid\nPartially Paid\nPaid",
+   "read_only": 1
+  },
+  {
+   "fieldname": "signature_token",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Signature Token",
+   "read_only": 1
+  },
+  {
+   "description": "The final PDF, regenerated with the trainer's signature embedded once they sign via the public link.",
+   "fieldname": "signed_contract",
+   "fieldtype": "Attach",
+   "label": "Signed Contract",
    "read_only": 1
   },
   {
