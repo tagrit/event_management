@@ -1,0 +1,23 @@
+{
+ "creation": "2026-09-19 00:00:00",
+ "doctype": "Page",
+ "icon": "fa fa-user",
+ "idx": 0,
+ "modified": "2026-09-19 00:00:00",
+ "module": "Event Management",
+ "name": "trainer-profile",
+ "page_name": "Trainer Profile",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Event Manager"
+  },
+  {
+   "role": "Event Confirmation Officer"
+  }
+ ],
+ "standard": "Yes",
+ "title": "Trainer Profile"
+}

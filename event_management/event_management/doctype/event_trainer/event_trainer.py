@@ -806,9 +806,114 @@ def force_update_payment_status(event_trainer_name):
     trainer_doc = frappe.get_doc("Event Trainer", event_trainer_name)
     trainer_doc.update_payment_status()
     trainer_doc.reload()
-    
+
     return {
         "paid_amount": trainer_doc.paid_amount or 0,
         "payment_status": trainer_doc.payment_status,
         "total_amount": trainer_doc.total_amount
+    }
+
+
+@frappe.whitelist()
+def get_trainer_profile(trainer):
+    """Aggregate everything the Trainer Profile page needs: contact/CV info,
+    KPIs, every event they've trained, and a running payment statement
+    (invoices owed + payments made, in date order) across all events -
+    the trainer's aging/statement view."""
+    if not frappe.db.exists("Supplier", trainer):
+        frappe.throw("Trainer not found")
+
+    supplier = frappe.get_doc("Supplier", trainer)
+
+    assignments = frappe.get_all(
+        "Event Trainer",
+        filters={"trainer": trainer},
+        fields=[
+            "name", "event_registration", "event_name", "event_start_date", "event_end_date",
+            "event_venue", "event_location", "rate_type", "agreed_rate", "total_amount",
+            "paid_amount", "payment_status", "contract_sent", "contract_signed", "contract_signed_date"
+        ],
+        order_by="event_start_date desc"
+    )
+
+    for assignment in assignments:
+        # Keep stored payment status fresh (same as get_trainers_with_fresh_status)
+        assignment_doc = frappe.get_doc("Event Trainer", assignment["name"])
+        assignment_doc.update_payment_status()
+        assignment_doc.reload()
+        assignment["paid_amount"] = assignment_doc.paid_amount or 0
+        assignment["payment_status"] = assignment_doc.payment_status
+
+    total_events = len(assignments)
+    total_earned = sum(flt(a["total_amount"]) for a in assignments)
+    total_paid = sum(flt(a["paid_amount"]) for a in assignments)
+    total_outstanding = total_earned - total_paid
+
+    invoices = frappe.get_all(
+        "Purchase Invoice",
+        filters={"supplier": trainer, "docstatus": 1},
+        fields=["name", "posting_date", "grand_total", "event_trainer"],
+        order_by="posting_date asc"
+    )
+
+    payments = frappe.get_all(
+        "Payment Entry",
+        filters={"party_type": "Supplier", "party": trainer, "docstatus": 1},
+        fields=["name", "posting_date", "paid_amount", "event_trainer", "remarks"],
+        order_by="posting_date asc"
+    )
+
+    assignment_event_names = {a["name"]: a["event_name"] for a in assignments}
+
+    ledger = []
+    for inv in invoices:
+        ledger.append({
+            "date": inv.posting_date,
+            "type": "Invoice",
+            "reference": inv.name,
+            "description": assignment_event_names.get(inv.event_trainer, "Training Invoice"),
+            "amount": flt(inv.grand_total)
+        })
+    for pay in payments:
+        ledger.append({
+            "date": pay.posting_date,
+            "type": "Payment",
+            "reference": pay.name,
+            "description": assignment_event_names.get(pay.event_trainer) or pay.remarks or "Payment",
+            "amount": -flt(pay.paid_amount)
+        })
+
+    ledger.sort(key=lambda row: row["date"])
+
+    running_balance = 0
+    for row in ledger:
+        running_balance += row["amount"]
+        row["balance"] = running_balance
+        row["date"] = formatdate(row["date"])
+
+    documents = [
+        {"document_name": row.document_name, "file": row.file, "description": row.description}
+        for row in (supplier.get("trainer_documents") or [])
+    ]
+
+    return {
+        "trainer": {
+            "name": supplier.name,
+            "supplier_name": supplier.supplier_name,
+            "email": getattr(supplier, "email_id", None),
+            "mobile_no": getattr(supplier, "mobile_no", None),
+            "area_of_expertise": getattr(supplier, "area_of_expertise", None),
+            "rate_type": getattr(supplier, "trainer_rate_type", None),
+            "rate": getattr(supplier, "trainer_rate", None),
+            "cv_attachment": getattr(supplier, "cv_attachment", None)
+        },
+        "kpis": {
+            "total_events": total_events,
+            "total_earned": total_earned,
+            "total_paid": total_paid,
+            "total_outstanding": total_outstanding
+        },
+        "assignments": assignments,
+        "ledger": ledger,
+        "documents": documents
     }
