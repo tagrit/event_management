@@ -9,6 +9,7 @@
   "facilitator_name",
   "company_signature",
   "cc_email",
+  "cc_emails",
   "column_break_sdnt",
   "calendar_link",
   "company_logo",
@@ -48,6 +49,12 @@
    "fieldname": "cc_email",
    "fieldtype": "Data",
    "label": "CC Email"
+  },
+  {
+   "description": "Additional CC recipients for event emails. Separate multiple addresses with a comma, semicolon, or new line.",
+   "fieldname": "cc_emails",
+   "fieldtype": "Small Text",
+   "label": "CC Emails (Others)"
   },
   {
    "fieldname": "company_stamp",

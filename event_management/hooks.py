@@ -169,6 +169,9 @@ scheduler_events = {
         ],
         "0 9 * * 3": [
             "event_management.event_management.doctype.event_registration.event_registration.trigger_automated_wednesday_report"
+        ],
+        "0 14 * * 4": [
+            "event_management.event_management.doctype.event_registration.event_registration.trigger_automated_thursday_welcome_emails"
         ]
     }
 }

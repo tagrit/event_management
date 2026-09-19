@@ -10,6 +10,32 @@ import os
 import re
 
 
+def get_cc_email_list(settings):
+    """Combine the single 'CC Email' field with the multi-address 'CC Emails (Others)'
+    field on Event Management Setting into one deduped list of valid addresses."""
+    raw_addresses = []
+    if settings.cc_email:
+        raw_addresses.append(settings.cc_email)
+    if settings.cc_emails:
+        raw_addresses.extend(re.split(r"[,;\n]+", settings.cc_emails))
+
+    seen = set()
+    cc_list = []
+    for address in raw_addresses:
+        address = address.strip()
+        if not address or address.lower() in seen:
+            continue
+        try:
+            validate_email_address(address, throw=True)
+        except Exception:
+            frappe.log_error(f"Skipping invalid CC address: {address}", "Event Management CC Email")
+            continue
+        seen.add(address.lower())
+        cc_list.append(address)
+
+    return cc_list
+
+
 class EventRegistration(Document):
     def validate(self):
         """This runs before saving the document"""
@@ -146,8 +172,8 @@ class EventRegistration(Document):
         )
 
         settings = frappe.get_doc("Event Management Setting")
-        cc = [settings.cc_email] if settings.cc_email else [] 
-        
+        cc = get_cc_email_list(settings)
+
         template_args = {
             "event": self,
             "delegate": {
@@ -170,7 +196,7 @@ class EventRegistration(Document):
             message = frappe.render_template(email_template.response, template_args)
             frappe.sendmail(
                 recipients=[delegate.email],
-                cc=settings.cc_email,  # plain string
+                cc=cc,
                 expose_recipients="header",  # ← forces CC to show in email header
                 subject=subject,
                 message=message,
@@ -183,7 +209,7 @@ class EventRegistration(Document):
             )
             frappe.sendmail(
                 recipients=[delegate.email],
-                cc=settings.cc_email,  # plain string
+                cc=cc,
                 expose_recipients="header",  # ← forces CC to show in email header
                 subject=f"{self.event_name} Registration Confirmation",
                 message=message,
@@ -540,6 +566,9 @@ def send_welcome_email_to_confirmed(event_name):
         frappe.msgprint("No confirmed delegates yet!")
         return
 
+    settings = frappe.get_doc("Event Management Setting")
+    cc = get_cc_email_list(settings)
+
     custom_attachments = []
     for row in event.get("welcome_attachments"):
         if row.file:
@@ -578,6 +607,8 @@ def send_welcome_email_to_confirmed(event_name):
                 message = frappe.render_template(email_template.response, template_args)
                 frappe.sendmail(
                     recipients=[delegate.email],
+                    cc=cc,
+                    expose_recipients="header",
                     subject=subject,
                     message=message,
                     attachments=custom_attachments,
@@ -592,6 +623,8 @@ def send_welcome_email_to_confirmed(event_name):
                 )
                 frappe.sendmail(
                     recipients=[delegate.email],
+                    cc=cc,
+                    expose_recipients="header",
                     subject=f"Welcome to {event.event_name}",
                     message=message,
                     attachments=custom_attachments
@@ -684,10 +717,41 @@ def trigger_automated_wednesday_report():
     frappe.db.commit()
     
     frappe.log_error(
-        f"Wednesday report sent successfully for {len(events_to_process)} events to {recipient}", 
+        f"Wednesday report sent successfully for {len(events_to_process)} events to {recipient}",
         "Wednesday Report Success"
     )
-    
+
+
+@frappe.whitelist()
+def trigger_automated_thursday_welcome_emails():
+    """Auto-dispatch the confirmed-delegate welcome email every Thursday at 2 PM
+    for any submitted, fully-confirmed event that hasn't had it sent yet."""
+    events_to_process = frappe.get_all(
+        "Event Registration",
+        filters={
+            "docstatus": 1,
+            "all_confirmed": 1,
+            "welcome_email_sent": 0
+        },
+        fields=["name"]
+    )
+
+    if not events_to_process:
+        frappe.log_error("No confirmed events pending a welcome email", "Thursday Welcome Email - No Events")
+        return
+
+    for e in events_to_process:
+        try:
+            send_welcome_email_to_confirmed(e.name)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"Thursday Welcome Email Failed for {e.name}")
+
+    frappe.log_error(
+        f"Thursday welcome email run processed {len(events_to_process)} event(s)",
+        "Thursday Welcome Email Success"
+    )
+
+
 @frappe.whitelist()
 def get_dashboard_data():
     draft_count = frappe.db.count("Event Registration", {"docstatus": 0})
