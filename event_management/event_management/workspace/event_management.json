@@ -68,6 +68,12 @@
     "type": "Link"
    },
    {
+    "label": "Divisions",
+    "link_to": "Division",
+    "link_type": "DocType",
+    "type": "Link"
+   },
+   {
     "label": "Event Trainers",
     "link_to": "Event Trainer",
     "link_type": "DocType",
