@@ -26,6 +26,7 @@ def after_install():
         create_welcome_email_template,
         drop_event_name_unique_index,
         increase_max_upload_file_size,
+        reorder_trainer_fields_after_supplier_name,
     )
 
     patch_modules = (
@@ -38,6 +39,7 @@ def after_install():
         add_event_trainer_linking_fields,
         add_trainer_documents_field,
         add_trainer_only_supplier_view,
+        reorder_trainer_fields_after_supplier_name,
         increase_max_upload_file_size,
         drop_event_name_unique_index,
     )
