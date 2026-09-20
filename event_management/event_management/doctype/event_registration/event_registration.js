@@ -60,13 +60,12 @@ frappe.ui.form.on('Event Registration', {
         }
         
         if (frm.doc.all_confirmed && frm.doc.docstatus === 1) {
-            frm.add_custom_button(__('Add Trainers'), function() {
-                frappe.route_options = {
-                    "event_registration": frm.doc.name
-                };
-                frappe.set_route("List", "Event Trainer");
+            frm.add_custom_button(__('Add Trainer'), function() {
+                frappe.new_doc('Event Trainer', {
+                    event_registration: frm.doc.name
+                });
             }, __("Training Management"));
-            
+
             frm.add_custom_button(__('View Trainers'), function() {
                 show_trainers_dialog(frm);
             }, __("Training Management"));
