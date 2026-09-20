@@ -70,6 +70,8 @@ class EventRegistration(Document):
             # via the emailed link (that endpoint runs with allow_guest=True).
             if delegate.confirmed and not delegate.confirmed_by:
                 delegate.confirmed_by = frappe.session.user
+            if delegate.confirmed and not delegate.confirmation_date:
+                delegate.confirmation_date = now()
             elif not delegate.confirmed:
                 delegate.confirmed_by = None
 
