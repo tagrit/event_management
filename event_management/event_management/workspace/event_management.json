@@ -172,30 +172,35 @@
     "label": "Event Summary Report",
     "link_to": "Event Summary Report",
     "link_type": "Report",
+    "is_query_report": 1,
     "type": "Link"
    },
    {
     "label": "Delegate Confirmation Report",
     "link_to": "Delegate Confirmation Report",
     "link_type": "Report",
+    "is_query_report": 1,
     "type": "Link"
    },
    {
     "label": "Organization Training History Report",
     "link_to": "Organization Training History Report",
     "link_type": "Report",
+    "is_query_report": 1,
     "type": "Link"
    },
    {
     "label": "Staff Confirmation Activity Report",
     "link_to": "Staff Confirmation Activity Report",
     "link_type": "Report",
+    "is_query_report": 1,
     "type": "Link"
    },
    {
     "label": "Trainer Directory Report",
     "link_to": "Trainer Directory Report",
     "link_type": "Report",
+    "is_query_report": 1,
     "type": "Link"
    },
    {
@@ -207,18 +212,21 @@
     "label": "Event Profitability Report",
     "link_to": "Event Profitability Report",
     "link_type": "Report",
+    "is_query_report": 1,
     "type": "Link"
    },
    {
     "label": "Division Performance Report",
     "link_to": "Division Performance Report",
     "link_type": "Report",
+    "is_query_report": 1,
     "type": "Link"
    },
    {
     "label": "Trainer Payment Report",
     "link_to": "Trainer Payment Report",
     "link_type": "Report",
+    "is_query_report": 1,
     "type": "Link"
    }
   ]
