@@ -1,6 +1,6 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import getdate, add_days, now, get_datetime, nowdate, formatdate, get_url, validate_email_address, get_time
+from frappe.utils import getdate, add_days, now, get_datetime, nowdate, formatdate, get_url, validate_email_address, get_time, flt
 from frappe.utils.pdf import get_pdf
 import hashlib
 import json
