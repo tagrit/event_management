@@ -11,7 +11,7 @@ frappe.ui.form.on('Event Trainer', {
     const selected_trainer = frm.doc.trainer;
 
        if (selected_trainer) {
-        
+
         // 1. Try Supplier first
         frappe.db.get_value('Supplier', selected_trainer, ['email_id', 'mobile_no'], (r) => {
             let email = r ? r.email_id : null;
@@ -20,7 +20,7 @@ frappe.ui.form.on('Event Trainer', {
             if (!email || !mobile) {
                 // 2. Fallback using the captured variable 'selected_trainer'
                 frappe.db.get_list('Event Trainer', {
-                    filters: { 
+                    filters: {
                         'trainer': selected_trainer,
                         'name': ['!=', frm.doc.name] // Filter out current record
                     },
@@ -48,7 +48,7 @@ frappe.ui.form.on('Event Trainer', {
         });
     }
 },
-    
+
     validate: function(frm) {
         // Ensure email and mobile are filled before saving
         if (!frm.doc.email) {

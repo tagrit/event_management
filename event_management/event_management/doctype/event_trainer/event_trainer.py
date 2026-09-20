@@ -617,9 +617,6 @@ def make_payment_entry_from_invoice(purchase_invoice_name):
     return payment_entry
 
 
-def get_trainer_query():
-    """Filter to show only suppliers marked as trainers"""
-    return {"filters": {"is_trainer": 1}}
 
 
 @frappe.whitelist()
