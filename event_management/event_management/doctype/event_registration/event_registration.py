@@ -1364,3 +1364,153 @@ def card_pending_events(filters=None):
 def card_upcoming_events(filters=None):
     summary = get_dashboard_data()["summary"]
     return {"value": summary["upcoming_events"], "fieldtype": "Int"}
+
+
+def _parse_recipient_list(raw):
+    if not raw:
+        return []
+    seen = set()
+    recipients = []
+    for address in re.split(r"[,;\n]+", raw):
+        address = address.strip()
+        if not address or address.lower() in seen:
+            continue
+        try:
+            validate_email_address(address, throw=True)
+        except Exception:
+            frappe.log_error(f"Skipping invalid CEO report recipient: {address}", "Event Management CEO Report")
+            continue
+        seen.add(address.lower())
+        recipients.append(address)
+    return recipients
+
+
+@frappe.whitelist()
+def check_and_run_scheduled_ceo_report():
+    """Runs frequently (see hooks.py cron). Only actually dispatches once, on the
+    day/time configured on Event Management Setting, so the schedule can be
+    changed from the Setting page without touching code or restarting anything."""
+    settings = frappe.get_doc("Event Management Setting")
+    _run_if_schedule_due(
+        settings,
+        enabled_field="ceo_report_schedule_enabled",
+        day_field="ceo_report_day",
+        time_field="ceo_report_time",
+        last_run_field="ceo_report_last_run",
+        default_day="Monday",
+        action=send_ceo_summary_report
+    )
+
+
+def send_ceo_summary_report():
+    """Emails a styled executive summary (events, delegates, confirmations,
+    revenue, expenses and net profit) to the recipients configured on Event
+    Management Setting. Unlike the desk UI/reports, this always includes
+    financial figures - it's addressed to whoever the admin explicitly
+    listed as a recipient, not gated by the viewer's roles."""
+    settings = frappe.get_doc("Event Management Setting")
+    recipients = _parse_recipient_list(settings.ceo_report_recipients)
+    if not recipients:
+        return
+
+    data = get_dashboard_data()
+    html = _build_ceo_report_html(data)
+
+    frappe.sendmail(
+        recipients=recipients,
+        subject=f"Event Management Executive Summary - {formatdate(nowdate(), 'd MMMM yyyy')}",
+        message=html,
+        now=True
+    )
+
+
+def _build_ceo_report_html(data):
+    s = data["summary"]
+    f = data["financial"]
+    profit_color = "#16a34a" if f["net_profit"] >= 0 else "#dc2626"
+
+    def kpi_cell(label, value, color):
+        return f"""
+        <td style="padding: 16px; text-align: center; background: {color}0d; border: 1px solid {color}33; border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: 700; color: {color};">{value}</div>
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 4px;">{label}</div>
+        </td>"""
+
+    org_rows = "".join(f"""
+        <tr>
+            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">{org.organization_name}</td>
+            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">{org.event_count}</td>
+            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">{frappe.format_value(org.total_revenue, {"fieldtype": "Currency"})}</td>
+        </tr>""" for org in data["top_organizations"][:5]) or '<tr><td colspan="3" style="padding: 12px; text-align: center; color: #94a3b8;">No data yet.</td></tr>'
+
+    division_rows = "".join(f"""
+        <tr>
+            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">{div.division or "Unassigned"}</td>
+            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">{div.event_count}</td>
+            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">{frappe.format_value(div.total_revenue, {"fieldtype": "Currency"})}</td>
+        </tr>""" for div in data["division_breakdown"]) or '<tr><td colspan="3" style="padding: 12px; text-align: center; color: #94a3b8;">No data yet.</td></tr>'
+
+    return f"""
+    <div style="max-width: 680px; margin: 0 auto; font-family: Arial, sans-serif; color: #1e293b;">
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 28px; border-radius: 10px 10px 0 0;">
+            <h2 style="color: white; margin: 0 0 6px 0;">Event Management Executive Summary</h2>
+            <div style="color: #dbeafe; font-size: 13px;">{formatdate(nowdate(), 'EEEE, d MMMM yyyy')}</div>
+        </div>
+        <div style="background: white; border: 1px solid #e2e8f0; border-top: none; padding: 24px; border-radius: 0 0 10px 10px;">
+
+            <h3 style="color: #1e3a8a; font-size: 14px; margin: 0 0 12px 0;">Financial Performance</h3>
+            <table width="100%" cellpadding="0" cellspacing="8" style="margin-bottom: 20px;">
+                <tr>
+                    {kpi_cell("Income Collected", frappe.format_value(f["income_collected"], {"fieldtype": "Currency"}), "#1e3a8a")}
+                    {kpi_cell("Expenses Paid", frappe.format_value(f["expenses_paid"], {"fieldtype": "Currency"}), "#d97706")}
+                </tr>
+                <tr>
+                    {kpi_cell("Net Profit", frappe.format_value(f["net_profit"], {"fieldtype": "Currency"}), profit_color)}
+                    {kpi_cell("Profit Margin", f'{f["profit_margin"]}%', profit_color)}
+                </tr>
+            </table>
+
+            <h3 style="color: #1e3a8a; font-size: 14px; margin: 0 0 12px 0;">Operations</h3>
+            <table width="100%" cellpadding="0" cellspacing="8" style="margin-bottom: 24px;">
+                <tr>
+                    {kpi_cell("Confirmed Events", s["confirmed_events"], "#16a34a")}
+                    {kpi_cell("Pending Confirmation", s["pending_events"], "#d97706")}
+                    {kpi_cell("Draft Events", s["draft_events"], "#64748b")}
+                </tr>
+                <tr>
+                    {kpi_cell("Total Delegates", s["total_delegates"], "#1e3a8a")}
+                    {kpi_cell("Confirmation Rate", f'{s["confirmation_rate"]}%', "#16a34a")}
+                    {kpi_cell("Upcoming (30 days)", s["upcoming_events"], "#8b5cf6")}
+                </tr>
+            </table>
+
+            <h3 style="color: #1e3a8a; font-size: 14px; margin: 0 0 10px 0;">Top Organizations</h3>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; border-collapse: collapse; font-size: 12.5px;">
+                <thead>
+                    <tr style="background: #f8fafc;">
+                        <th style="padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b;">Organization</th>
+                        <th style="padding: 8px 10px; text-align: right; font-size: 11px; text-transform: uppercase; color: #64748b;">Events</th>
+                        <th style="padding: 8px 10px; text-align: right; font-size: 11px; text-transform: uppercase; color: #64748b;">Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>{org_rows}</tbody>
+            </table>
+
+            <h3 style="color: #1e3a8a; font-size: 14px; margin: 0 0 10px 0;">Performance by Division</h3>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; font-size: 12.5px;">
+                <thead>
+                    <tr style="background: #f8fafc;">
+                        <th style="padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b;">Division</th>
+                        <th style="padding: 8px 10px; text-align: right; font-size: 11px; text-transform: uppercase; color: #64748b;">Events</th>
+                        <th style="padding: 8px 10px; text-align: right; font-size: 11px; text-transform: uppercase; color: #64748b;">Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>{division_rows}</tbody>
+            </table>
+
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8;">
+                Automated summary from the Event Management module. Full drill-down reports are available under Event CB &rarr; Events Reports.
+            </div>
+        </div>
+    </div>
+    """

@@ -1,7 +1,7 @@
 [
  {
   "charts": [],
-  "content": "[{\"id\":\"H-1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h5\\\"><b>EVENT OVERVIEW</b></span>\",\"col\":12}},{\"id\":\"NC-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Revenue Collected\",\"col\":4}},{\"id\":\"NC-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Expenses Paid\",\"col\":4}},{\"id\":\"NC-3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Net Profit\",\"col\":4}},{\"id\":\"NC-4\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Confirmation Rate\",\"col\":3}},{\"id\":\"NC-5\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Confirmed Events\",\"col\":3}},{\"id\":\"NC-6\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Events\",\"col\":3}},{\"id\":\"NC-7\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Upcoming Events (30 days)\",\"col\":3}},{\"id\":\"SP-0\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"H-4\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h6\\\"><b>Quick Actions</b></span>\",\"col\":12}},{\"id\":\"S-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Draft Events\",\"col\":4}},{\"id\":\"S-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Confirmed\",\"col\":4}},{\"id\":\"S-3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Pending\",\"col\":4}},{\"id\":\"S-4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Trainers\",\"col\":4}},{\"id\":\"SP-1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"H-2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h6\\\"><b>Quick Access</b></span>\",\"col\":12}},{\"id\":\"C-1\",\"type\":\"card\",\"data\":{\"card_name\":\"Event Planning\",\"col\":4}},{\"id\":\"C-2\",\"type\":\"card\",\"data\":{\"card_name\":\"Delegates & Attendance\",\"col\":4}},{\"id\":\"C-3\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
+  "content": "[{\"id\":\"H-1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h5\\\"><b>EVENT OVERVIEW</b></span>\",\"col\":12}},{\"id\":\"NC-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Revenue Collected\",\"col\":4}},{\"id\":\"NC-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Expenses Paid\",\"col\":4}},{\"id\":\"NC-3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Net Profit\",\"col\":4}},{\"id\":\"NC-4\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Confirmation Rate\",\"col\":3}},{\"id\":\"NC-5\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Confirmed Events\",\"col\":3}},{\"id\":\"NC-6\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Events\",\"col\":3}},{\"id\":\"NC-7\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Upcoming Events (30 days)\",\"col\":3}},{\"id\":\"SP-0\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"H-4\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h6\\\"><b>Quick Actions</b></span>\",\"col\":12}},{\"id\":\"S-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Draft Events\",\"col\":4}},{\"id\":\"S-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Confirmed\",\"col\":4}},{\"id\":\"S-3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Pending\",\"col\":4}},{\"id\":\"S-4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Trainers\",\"col\":4}},{\"id\":\"SP-1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"H-2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h6\\\"><b>Quick Access</b></span>\",\"col\":12}},{\"id\":\"C-1\",\"type\":\"card\",\"data\":{\"card_name\":\"Event Planning\",\"col\":4}},{\"id\":\"C-2\",\"type\":\"card\",\"data\":{\"card_name\":\"Delegates & Attendance\",\"col\":4}},{\"id\":\"C-3\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}},{\"id\":\"SP-2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"H-3\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h6\\\"><b>Events Reports</b></span>\",\"col\":12}},{\"id\":\"C-4\",\"type\":\"card\",\"data\":{\"card_name\":\"Events Reports\",\"col\":6}},{\"id\":\"C-5\",\"type\":\"card\",\"data\":{\"card_name\":\"Financial Reports\",\"col\":6}}]",
   "docstatus": 0,
   "doctype": "Workspace",
   "icon": "calendar",
@@ -161,6 +161,64 @@
     "label": "Email Templates",
     "link_to": "Email Template",
     "link_type": "DocType",
+    "type": "Link"
+   },
+   {
+    "label": "Events Reports",
+    "link_type": "DocType",
+    "type": "Card Break"
+   },
+   {
+    "label": "Event Summary Report",
+    "link_to": "Event Summary Report",
+    "link_type": "Report",
+    "type": "Link"
+   },
+   {
+    "label": "Delegate Confirmation Report",
+    "link_to": "Delegate Confirmation Report",
+    "link_type": "Report",
+    "type": "Link"
+   },
+   {
+    "label": "Organization Training History Report",
+    "link_to": "Organization Training History Report",
+    "link_type": "Report",
+    "type": "Link"
+   },
+   {
+    "label": "Staff Confirmation Activity Report",
+    "link_to": "Staff Confirmation Activity Report",
+    "link_type": "Report",
+    "type": "Link"
+   },
+   {
+    "label": "Trainer Directory Report",
+    "link_to": "Trainer Directory Report",
+    "link_type": "Report",
+    "type": "Link"
+   },
+   {
+    "label": "Financial Reports",
+    "link_type": "DocType",
+    "type": "Card Break"
+   },
+   {
+    "label": "Event Profitability Report",
+    "link_to": "Event Profitability Report",
+    "link_type": "Report",
+    "type": "Link"
+   },
+   {
+    "label": "Division Performance Report",
+    "link_to": "Division Performance Report",
+    "link_type": "Report",
+    "type": "Link"
+   },
+   {
+    "label": "Trainer Payment Report",
+    "link_to": "Trainer Payment Report",
+    "link_type": "Report",
     "type": "Link"
    }
   ]

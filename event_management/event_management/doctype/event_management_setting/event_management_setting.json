@@ -25,7 +25,14 @@
   "reminder_email_day",
   "column_break_resd",
   "reminder_email_time",
-  "reminder_email_last_run"
+  "reminder_email_last_run",
+  "ceo_report_schedule_section",
+  "ceo_report_schedule_enabled",
+  "ceo_report_day",
+  "column_break_ceord",
+  "ceo_report_time",
+  "ceo_report_recipients",
+  "ceo_report_last_run"
  ],
  "fields": [
   {
@@ -140,6 +147,48 @@
   },
   {
    "fieldname": "reminder_email_last_run",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Last Run (auto-tracked, do not edit)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ceo_report_schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Automated Executive Summary Report"
+  },
+  {
+   "default": "0",
+   "description": "When enabled, a summarized executive report (events, delegates, confirmations, revenue and profitability) is emailed automatically on the day/time below to the recipients listed.",
+   "fieldname": "ceo_report_schedule_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Automated Executive Summary Report"
+  },
+  {
+   "default": "Monday",
+   "fieldname": "ceo_report_day",
+   "fieldtype": "Select",
+   "label": "Day",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
+  },
+  {
+   "fieldname": "column_break_ceord",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "08:00:00",
+   "fieldname": "ceo_report_time",
+   "fieldtype": "Time",
+   "label": "Time"
+  },
+  {
+   "description": "Who receives the executive summary. Separate multiple addresses with a comma, semicolon, or new line.",
+   "fieldname": "ceo_report_recipients",
+   "fieldtype": "Small Text",
+   "label": "Recipients"
+  },
+  {
+   "fieldname": "ceo_report_last_run",
    "fieldtype": "Date",
    "hidden": 1,
    "label": "Last Run (auto-tracked, do not edit)",

@@ -180,7 +180,8 @@ scheduler_events = {
         ],
         "*/15 * * * *": [
             "event_management.event_management.doctype.event_registration.event_registration.check_and_run_scheduled_welcome_emails",
-            "event_management.event_management.doctype.event_registration.event_registration.check_and_run_scheduled_reminders"
+            "event_management.event_management.doctype.event_registration.event_registration.check_and_run_scheduled_reminders",
+            "event_management.event_management.doctype.event_registration.event_registration.check_and_run_scheduled_ceo_report"
         ]
     }
 }
