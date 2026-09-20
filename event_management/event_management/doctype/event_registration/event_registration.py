@@ -1015,15 +1015,35 @@ def make_sales_invoice(source_name, target_doc=None):
         item_code = "Training Fee"
         ensure_training_fee_item_exists(item_code)
 
+        # charges_per_delegate is VAT-inclusive (same assumption the proforma
+        # invoice PDF uses), so back out the net rate here too - otherwise
+        # applying VAT on top of an already-inclusive rate would overcharge
+        # the client relative to what the proforma quoted them.
+        net_rate = flt(source.charges_per_delegate) / 1.16
+        net_amount = net_rate * flt(source.number_of_delegates)
+
         target.append("items", {
             "item_code": item_code,
             "item_name": item_code,
             "description": f"Training fee for {source.event_name} ({formatdate(source.start_date)} to {formatdate(source.end_date)})",
             "qty": source.number_of_delegates,
-            "rate": source.charges_per_delegate,
-            "amount": source.revenue,
+            "rate": net_rate,
+            "amount": net_amount,
             "uom": "Nos"
         })
+
+        tax_template_name = "Kenya Tax - CL"
+        if frappe.db.exists("Sales Taxes and Charges Template", tax_template_name):
+            template = frappe.get_doc("Sales Taxes and Charges Template", tax_template_name)
+            target.taxes_and_charges = tax_template_name
+            for row in template.taxes:
+                target.append("taxes", {
+                    "charge_type": row.charge_type,
+                    "account_head": row.account_head,
+                    "rate": row.rate,
+                    "description": row.description,
+                    "cost_center": row.cost_center,
+                })
 
     doclist = get_mapped_doc(
         "Event Registration",

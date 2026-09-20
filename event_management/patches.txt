@@ -18,5 +18,6 @@
  event_management.patches.add_trainer_only_supplier_view
  event_management.patches.reorder_trainer_fields_after_supplier_name
  event_management.patches.add_event_finance_fields
+ event_management.patches.backfill_event_organization_customers
 
 

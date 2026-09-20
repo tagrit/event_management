@@ -20,6 +20,7 @@ def after_install():
         add_trainer_documents_field,
         add_trainer_management_fields,
         add_trainer_only_supplier_view,
+        backfill_event_organization_customers,
         create_attendance_confirmation_email_template,
         create_default_settings,
         create_event_confirmation_role,
@@ -44,6 +45,7 @@ def after_install():
         increase_max_upload_file_size,
         drop_event_name_unique_index,
         add_event_finance_fields,
+        backfill_event_organization_customers,
     )
 
     for patch_module in patch_modules:
