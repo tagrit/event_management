@@ -48,9 +48,19 @@ class EventRegistration(Document):
                 frappe.throw("End date cannot be before start date!")
 
         self.revenue = self.number_of_delegates * self.charges_per_delegate
-        
+
         self.generate_event_identifier()
 
+        self.sync_delegate_confirmations()
+
+    def before_update_after_submit(self):
+        """Frappe skips validate() when resaving an already-submitted document
+        (it runs this hook instead), so the delegate-confirmation sync has to be
+        repeated here too - otherwise confirming a delegate on a submitted event
+        (the normal case) silently never sets confirmed_by/all_confirmed."""
+        self.sync_delegate_confirmations()
+
+    def sync_delegate_confirmations(self):
         for delegate in self.delegates:
             if not delegate.confirmation_token:
                 delegate.confirmation_token = self.generate_confirmation_token(delegate.email)
@@ -64,7 +74,7 @@ class EventRegistration(Document):
                 delegate.confirmed_by = None
 
         self.update_all_confirmed_status()
-        
+
     def before_insert(self):
         self.set_default_attachments()
 
