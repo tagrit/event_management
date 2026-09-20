@@ -50,21 +50,31 @@ CARDS = [
 
 def execute():
     """Create the Number Cards used by the Event CB workspace's top KPI
-    section. Idempotent - safe to re-run (e.g. on a fresh install)."""
-    for card in CARDS:
-        if frappe.db.exists("Number Card", card["name"]):
-            continue
+    section. Idempotent - safe to re-run (e.g. on a fresh install).
 
-        frappe.get_doc({
-            "doctype": "Number Card",
-            "name": card["name"],
-            "label": card["label"],
-            "type": "Custom",
-            "method": card["method"],
-            "document_type": "Event Registration",
-            "is_public": 1,
-            "show_percentage_stats": 0,
-            "color": card["color"],
-        }).insert(ignore_permissions=True)
+    Number Card has no autoname rule, so Frappe's set_new_name() wipes any
+    explicitly-assigned doc.name back to None before calling the doctype's
+    own autoname() (which then falls back to the label) - unless
+    frappe.flags.in_import is set, which is the standard way to force a
+    specific name on a doctype like this one."""
+    previous_flag = frappe.flags.in_import
+    frappe.flags.in_import = True
+    try:
+        for card in CARDS:
+            if frappe.db.exists("Number Card", card["name"]):
+                continue
+
+            doc = frappe.new_doc("Number Card")
+            doc.name = card["name"]
+            doc.label = card["label"]
+            doc.type = "Custom"
+            doc.method = card["method"]
+            doc.document_type = "Event Registration"
+            doc.is_public = 1
+            doc.show_percentage_stats = 0
+            doc.color = card["color"]
+            doc.insert(ignore_permissions=True)
+    finally:
+        frappe.flags.in_import = previous_flag
 
     frappe.db.commit()
