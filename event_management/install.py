@@ -15,6 +15,7 @@ def after_install():
     sync_event_management_workspace()
 
     from event_management.patches import (
+        add_event_finance_fields,
         add_event_trainer_linking_fields,
         add_trainer_documents_field,
         add_trainer_management_fields,
@@ -42,6 +43,7 @@ def after_install():
         reorder_trainer_fields_after_supplier_name,
         increase_max_upload_file_size,
         drop_event_name_unique_index,
+        add_event_finance_fields,
     )
 
     for patch_module in patch_modules:

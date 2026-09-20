@@ -945,3 +945,268 @@ def get_dashboard_data():
         },
         "top_organizations": top_organizations
     }
+
+
+def _get_event_customer(event):
+    """The Customer billed for this event's client organization, or None if
+    the Event Organization record hasn't been linked to one yet."""
+    if not event.organization_name:
+        return None
+    return frappe.db.get_value("Event Organization", event.organization_name, "customer")
+
+
+def ensure_training_fee_item_exists(item_code="Training Fee"):
+    """Ensure a sales-side Training Fee item exists, mirroring
+    event_trainer.ensure_training_service_item_exists on the purchase side."""
+    if frappe.db.exists("Item", item_code):
+        return
+
+    try:
+        item_group = None
+        if frappe.db.exists("Item Group", "Services"):
+            item_group = "Services"
+        elif frappe.db.exists("Item Group", "Service"):
+            item_group = "Service"
+        else:
+            item_group = frappe.db.get_value("Item Group", {"is_group": 0}, "name")
+
+        if not item_group:
+            frappe.throw("No valid Item Group found. Please create an Item Group first.")
+
+        item = frappe.get_doc({
+            "doctype": "Item",
+            "item_code": item_code,
+            "item_name": item_code,
+            "item_group": item_group,
+            "stock_uom": "Nos",
+            "is_stock_item": 0,
+            "is_purchase_item": 0,
+            "is_sales_item": 1,
+            "description": "Training fee billed to client organizations for event management",
+            "maintain_stock": 0
+        })
+        item.insert(ignore_permissions=True)
+        frappe.db.commit()
+        frappe.msgprint(f"Item '{item_code}' created automatically", alert=True, indicator="green")
+
+    except Exception as e:
+        frappe.log_error(f"Error creating Training Fee item: {str(e)}", "Training Fee Item Creation")
+        frappe.throw(f"Could not create '{item_code}' item. Error: {str(e)}")
+
+
+@frappe.whitelist()
+def make_sales_invoice(source_name, target_doc=None):
+    """Create a Sales Invoice from Event Registration, billing the Customer
+    linked to the event's client Event Organization."""
+    from frappe.model.mapper import get_mapped_doc
+
+    event = frappe.get_doc("Event Registration", source_name)
+    customer = _get_event_customer(event)
+    if not customer:
+        frappe.throw(
+            f"'{event.organization_name}' has no Customer linked yet. "
+            f"Open the Event Organization record and set its Customer field first."
+        )
+
+    def set_missing_values(source, target):
+        target.customer = customer
+        target.event_registration = source.name
+
+        item_code = "Training Fee"
+        ensure_training_fee_item_exists(item_code)
+
+        target.append("items", {
+            "item_code": item_code,
+            "item_name": item_code,
+            "description": f"Training fee for {source.event_name} ({formatdate(source.start_date)} to {formatdate(source.end_date)})",
+            "qty": source.number_of_delegates,
+            "rate": source.charges_per_delegate,
+            "amount": source.revenue,
+            "uom": "Nos"
+        })
+
+    doclist = get_mapped_doc(
+        "Event Registration",
+        source_name,
+        {
+            "Event Registration": {
+                "doctype": "Sales Invoice",
+            }
+        },
+        target_doc,
+        set_missing_values
+    )
+
+    return doclist
+
+
+@frappe.whitelist()
+def create_event_payment_entry(event_registration_name, amount, reference_no=None, remarks=None, link_to_invoice=None, auto_submit=False):
+    """Record a payment received from the client organization for this event."""
+    event = frappe.get_doc("Event Registration", event_registration_name)
+    customer = _get_event_customer(event)
+    if not customer:
+        frappe.throw(
+            f"'{event.organization_name}' has no Customer linked yet. "
+            f"Open the Event Organization record and set its Customer field first."
+        )
+
+    company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
+    mode_of_payment = frappe.db.get_value("Mode of Payment", {"enabled": 1}, "name") or "Cash"
+    mode_of_payment_doc = frappe.get_doc("Mode of Payment", mode_of_payment)
+    payment_account = None
+
+    for account in mode_of_payment_doc.accounts:
+        if account.company == company:
+            payment_account = account.default_account
+            break
+
+    if not payment_account:
+        payment_account = frappe.get_cached_value("Company", company, "default_cash_account")
+
+    if not payment_account:
+        frappe.throw("Please set up a default payment account in Mode of Payment or Company settings")
+
+    receivable_account = frappe.get_cached_value("Company", company, "default_receivable_account")
+
+    payment = frappe.get_doc({
+        "doctype": "Payment Entry",
+        "payment_type": "Receive",
+        "party_type": "Customer",
+        "party": customer,
+        "company": company,
+        "posting_date": now(),
+        "paid_from": receivable_account,
+        "paid_to": payment_account,
+        "paid_amount": flt(amount),
+        "received_amount": flt(amount),
+        "source_exchange_rate": 1,
+        "target_exchange_rate": 1,
+        "reference_no": reference_no or event_registration_name,
+        "reference_date": now(),
+        "remarks": remarks or f"Payment received for {event.event_name}",
+        "mode_of_payment": mode_of_payment,
+        "event_registration": event_registration_name
+    })
+
+    if link_to_invoice:
+        invoice = frappe.get_doc("Sales Invoice", link_to_invoice)
+        payment.append("references", {
+            "reference_doctype": "Sales Invoice",
+            "reference_name": link_to_invoice,
+            "total_amount": invoice.grand_total,
+            "outstanding_amount": invoice.outstanding_amount,
+            "allocated_amount": min(flt(amount), invoice.outstanding_amount)
+        })
+
+    payment.insert()
+
+    if auto_submit:
+        payment.submit()
+
+    return payment.name
+
+
+@frappe.whitelist()
+def get_event_financial_summary(event_registration_name):
+    """Full income/expense breakdown for one event: what was invoiced and
+    collected from the client, what trainers were paid, what other expenses
+    (hotel, delegate materials, etc.) were booked against it via Purchase
+    Invoice, and the resulting net profit - for the CFO/management report."""
+    event = frappe.get_doc("Event Registration", event_registration_name)
+
+    invoiced_row = frappe.db.sql("""
+        SELECT COALESCE(SUM(grand_total), 0), COALESCE(SUM(outstanding_amount), 0)
+        FROM `tabSales Invoice`
+        WHERE docstatus = 1 AND event_registration = %s
+    """, event_registration_name)[0]
+    total_invoiced = flt(invoiced_row[0])
+    total_invoice_outstanding = flt(invoiced_row[1])
+    collected_via_invoice = total_invoiced - total_invoice_outstanding
+
+    collected_direct = flt(frappe.db.sql("""
+        SELECT COALESCE(SUM(pe.paid_amount), 0)
+        FROM `tabPayment Entry` pe
+        WHERE pe.docstatus = 1
+        AND pe.payment_type = 'Receive'
+        AND pe.event_registration = %s
+        AND NOT EXISTS (
+            SELECT 1 FROM `tabPayment Entry Reference` per WHERE per.parent = pe.name
+        )
+    """, event_registration_name)[0][0] or 0)
+
+    total_collected = collected_via_invoice + collected_direct
+
+    trainers = frappe.get_all(
+        "Event Trainer",
+        filters={"event_registration": event_registration_name},
+        fields=["name", "trainer_name", "total_amount", "paid_amount", "payment_status"]
+    )
+    trainer_contracted = sum(flt(t.total_amount) for t in trainers)
+    trainer_paid = sum(flt(t.paid_amount) for t in trainers)
+
+    other_invoices = frappe.db.sql("""
+        SELECT name, supplier_name, grand_total, outstanding_amount
+        FROM `tabPurchase Invoice`
+        WHERE docstatus = 1
+        AND event_registration = %s
+        AND (event_trainer IS NULL OR event_trainer = '')
+    """, event_registration_name, as_dict=1)
+
+    other_total_billed = sum(flt(inv.grand_total) for inv in other_invoices)
+    other_total_paid = sum(flt(inv.grand_total) - flt(inv.outstanding_amount) for inv in other_invoices)
+
+    other_breakdown = frappe.db.sql("""
+        SELECT
+            COALESCE(pii.expense_account, 'Unspecified Account') as category,
+            SUM(pii.amount) as amount
+        FROM `tabPurchase Invoice Item` pii
+        INNER JOIN `tabPurchase Invoice` pi ON pii.parent = pi.name
+        WHERE pi.docstatus = 1
+        AND pi.event_registration = %s
+        AND (pi.event_trainer IS NULL OR pi.event_trainer = '')
+        GROUP BY category
+        ORDER BY amount DESC
+    """, event_registration_name, as_dict=1)
+
+    total_expenses_paid = trainer_paid + other_total_paid
+    total_expenses_billed = trainer_contracted + other_total_billed
+    net_profit = total_collected - total_expenses_paid
+    profit_margin = round((net_profit / total_collected * 100), 1) if total_collected else 0
+
+    return {
+        "event": {
+            "name": event.name,
+            "event_name": event.event_name,
+            "organization_name": event.organization_name,
+            "start_date": event.start_date,
+            "end_date": event.end_date,
+            "division": event.division,
+            "number_of_delegates": event.number_of_delegates,
+            "budgeted_revenue": flt(event.revenue),
+        },
+        "income": {
+            "total_invoiced": total_invoiced,
+            "invoice_outstanding": total_invoice_outstanding,
+            "collected_via_invoice": collected_via_invoice,
+            "collected_direct": collected_direct,
+            "total_collected": total_collected,
+        },
+        "expenses": {
+            "trainers": {
+                "contracted": trainer_contracted,
+                "paid": trainer_paid,
+                "detail": trainers,
+            },
+            "other": {
+                "billed": other_total_billed,
+                "paid": other_total_paid,
+                "breakdown": other_breakdown,
+                "invoices": other_invoices,
+            },
+            "total_billed": total_expenses_billed,
+            "total_paid": total_expenses_paid,
+        },
+        "net_profit": net_profit,
+        "profit_margin": profit_margin,
+    }

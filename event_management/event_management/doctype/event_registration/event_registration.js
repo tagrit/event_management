@@ -76,8 +76,84 @@ frappe.ui.form.on('Event Registration', {
                 show_trainer_payment_summary(frm);
             }, __("Training Management"));
         }
+
+        if (frm.doc.docstatus === 1) {
+            frm.add_custom_button(__('Create Sales Invoice'), function() {
+                frappe.model.open_mapped_doc({
+                    method: 'event_management.event_management.doctype.event_registration.event_registration.make_sales_invoice',
+                    frm: frm
+                });
+            }, __("Finance"));
+
+            frm.add_custom_button(__('Record Payment Received'), function() {
+                show_record_payment_dialog(frm);
+            }, __("Finance"));
+
+            frm.add_custom_button(__('Add Expense (Hotel/Gifts/Other)'), function() {
+                frappe.new_doc('Purchase Invoice', {
+                    event_registration: frm.doc.name
+                });
+            }, __("Finance"));
+
+            frm.add_custom_button(__('View Profitability Report'), function() {
+                frappe.set_route('event-profitability', frm.doc.name);
+            }, __("Finance"));
+        }
     }
 });
+
+function show_record_payment_dialog(frm) {
+    const d = new frappe.ui.Dialog({
+        title: __('Record Payment Received - {0}', [frm.doc.event_name || frm.doc.name]),
+        fields: [
+            {
+                label: 'Amount',
+                fieldname: 'amount',
+                fieldtype: 'Currency',
+                reqd: 1
+            },
+            {
+                label: 'Reference No',
+                fieldname: 'reference_no',
+                fieldtype: 'Data',
+                description: 'Payment reference number (optional)'
+            },
+            {
+                label: 'Remarks',
+                fieldname: 'remarks',
+                fieldtype: 'Small Text',
+                default: `Payment received for ${frm.doc.event_name || frm.doc.name}`
+            }
+        ],
+        primary_action_label: __('Create Payment Entry'),
+        primary_action: function(values) {
+            if (values.amount <= 0) {
+                frappe.msgprint(__('Payment amount must be greater than zero'));
+                return;
+            }
+
+            frappe.call({
+                method: 'event_management.event_management.doctype.event_registration.event_registration.create_event_payment_entry',
+                args: {
+                    event_registration_name: frm.doc.name,
+                    amount: values.amount,
+                    reference_no: values.reference_no,
+                    remarks: values.remarks
+                },
+                freeze: true,
+                freeze_message: __('Creating Payment Entry...'),
+                callback: function(r) {
+                    if (r.message) {
+                        d.hide();
+                        frappe.set_route('Form', 'Payment Entry', r.message);
+                    }
+                }
+            });
+        }
+    });
+
+    d.show();
+}
 
 function calculate_revenue(frm) {
     if (frm.doc.number_of_delegates && frm.doc.charges_per_delegate) {

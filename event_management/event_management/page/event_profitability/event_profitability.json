@@ -1,0 +1,20 @@
+{
+ "creation": "2026-09-20 00:00:00",
+ "doctype": "Page",
+ "icon": "fa fa-line-chart",
+ "idx": 0,
+ "modified": "2026-09-20 00:00:00",
+ "module": "Event Management",
+ "name": "event-profitability",
+ "page_name": "Event Profitability",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Event Manager"
+  }
+ ],
+ "standard": "Yes",
+ "title": "Event Profitability"
+}

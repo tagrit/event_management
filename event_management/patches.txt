@@ -17,5 +17,6 @@
  event_management.patches.add_trainer_documents_field
  event_management.patches.add_trainer_only_supplier_view
  event_management.patches.reorder_trainer_fields_after_supplier_name
+ event_management.patches.add_event_finance_fields
 
 
