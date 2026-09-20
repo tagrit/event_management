@@ -926,7 +926,53 @@ def get_dashboard_data():
     """, as_dict=1)
     
     confirmation_rate = round((confirmed_delegates / total_delegates * 100) if total_delegates > 0 else 0, 1)
-    
+
+    division_breakdown = frappe.db.sql("""
+        SELECT division, COUNT(*) as event_count, SUM(revenue) as total_revenue
+        FROM `tabEvent Registration`
+        WHERE docstatus = 1
+        GROUP BY division
+        ORDER BY event_count DESC
+    """, as_dict=1)
+
+    setup_breakdown = frappe.db.sql("""
+        SELECT setup, COUNT(*) as count
+        FROM `tabEvent Registration`
+        WHERE docstatus = 1
+        GROUP BY setup
+    """, as_dict=1)
+
+    type_breakdown = frappe.db.sql("""
+        SELECT type, COUNT(*) as count
+        FROM `tabEvent Registration`
+        WHERE docstatus = 1
+        GROUP BY type
+    """, as_dict=1)
+
+    trainer_payment_breakdown = frappe.db.sql("""
+        SELECT payment_status, COUNT(*) as count
+        FROM `tabEvent Trainer`
+        GROUP BY payment_status
+    """, as_dict=1)
+
+    top_locations = frappe.db.sql("""
+        SELECT event_location, COUNT(*) as event_count
+        FROM `tabEvent Registration`
+        WHERE docstatus = 1
+        GROUP BY event_location
+        ORDER BY event_count DESC
+        LIMIT 5
+    """, as_dict=1)
+
+    financial = {
+        "income_collected": _get_module_income_collected(),
+        "expenses_paid": _get_module_expenses_paid(),
+    }
+    financial["net_profit"] = financial["income_collected"] - financial["expenses_paid"]
+    financial["profit_margin"] = round(
+        (financial["net_profit"] / financial["income_collected"] * 100) if financial["income_collected"] else 0, 1
+    )
+
     return {
         "summary": {
             "draft_events": draft_count,
@@ -943,7 +989,13 @@ def get_dashboard_data():
             "events_by_month": events_by_month,
             "revenue_by_month": revenue_by_month
         },
-        "top_organizations": top_organizations
+        "top_organizations": top_organizations,
+        "top_locations": top_locations,
+        "division_breakdown": division_breakdown,
+        "setup_breakdown": setup_breakdown,
+        "type_breakdown": type_breakdown,
+        "trainer_payment_breakdown": trainer_payment_breakdown,
+        "financial": financial
     }
 
 
