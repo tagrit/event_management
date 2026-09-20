@@ -56,6 +56,13 @@
     "type": "Link"
    },
    {
+    "description": "The event/course catalog - create the event here first, then select it when registering delegates.",
+    "label": "Events",
+    "link_to": "Event Name",
+    "link_type": "DocType",
+    "type": "Link"
+   },
+   {
     "label": "Event Registration",
     "link_to": "Event Registration",
     "link_type": "DocType",
