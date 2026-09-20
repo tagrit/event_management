@@ -12,8 +12,6 @@ def after_install():
     fields) would otherwise have to be run by hand with `bench execute`. Calling
     them here keeps a fresh install fully set up without any manual step.
     """
-    sync_event_management_workspace()
-
     from event_management.patches import (
         add_event_finance_fields,
         add_event_trainer_linking_fields,
@@ -24,6 +22,7 @@ def after_install():
         create_attendance_confirmation_email_template,
         create_default_settings,
         create_event_confirmation_role,
+        create_event_workspace_number_cards,
         create_registration_confirmation_email_template,
         create_welcome_email_template,
         drop_event_name_unique_index,
@@ -46,6 +45,7 @@ def after_install():
         drop_event_name_unique_index,
         add_event_finance_fields,
         backfill_event_organization_customers,
+        create_event_workspace_number_cards,
     )
 
     for patch_module in patch_modules:
@@ -56,6 +56,11 @@ def after_install():
                 title=f"event_management after_install: {patch_module.__name__} failed"
             )
             raise
+
+    # Number Cards must exist before the workspace (which links to them by
+    # name in its number_cards child table) is imported, or the import fails
+    # link validation - so this runs after the patch loop, not before it.
+    sync_event_management_workspace()
 
 
 def after_migrate():

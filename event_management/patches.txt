@@ -19,5 +19,6 @@
  event_management.patches.reorder_trainer_fields_after_supplier_name
  event_management.patches.add_event_finance_fields
  event_management.patches.backfill_event_organization_customers
+ event_management.patches.create_event_workspace_number_cards
 
 

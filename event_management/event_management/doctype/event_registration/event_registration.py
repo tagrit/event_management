@@ -1230,3 +1230,85 @@ def get_event_financial_summary(event_registration_name):
         "net_profit": net_profit,
         "profit_margin": profit_margin,
     }
+
+
+def _get_module_income_collected():
+    """Actual cash collected across ALL events, same logic as
+    get_event_financial_summary's income side but without filtering to one
+    event - used by the workspace KPI cards."""
+    via_invoice = flt(frappe.db.sql("""
+        SELECT COALESCE(SUM(grand_total - outstanding_amount), 0)
+        FROM `tabSales Invoice`
+        WHERE docstatus = 1 AND event_registration IS NOT NULL AND event_registration != ''
+    """)[0][0])
+
+    direct = flt(frappe.db.sql("""
+        SELECT COALESCE(SUM(pe.paid_amount), 0)
+        FROM `tabPayment Entry` pe
+        WHERE pe.docstatus = 1
+        AND pe.payment_type = 'Receive'
+        AND pe.event_registration IS NOT NULL AND pe.event_registration != ''
+        AND NOT EXISTS (
+            SELECT 1 FROM `tabPayment Entry Reference` per WHERE per.parent = pe.name
+        )
+    """)[0][0])
+
+    return via_invoice + direct
+
+
+def _get_module_expenses_paid():
+    """Actual expenses paid across ALL events (trainers + other), mirroring
+    get_event_financial_summary's expense side module-wide."""
+    trainer_paid = flt(frappe.db.sql("""
+        SELECT COALESCE(SUM(paid_amount), 0) FROM `tabEvent Trainer`
+    """)[0][0])
+
+    other_paid = flt(frappe.db.sql("""
+        SELECT COALESCE(SUM(grand_total - outstanding_amount), 0)
+        FROM `tabPurchase Invoice`
+        WHERE docstatus = 1
+        AND event_registration IS NOT NULL AND event_registration != ''
+        AND (event_trainer IS NULL OR event_trainer = '')
+    """)[0][0])
+
+    return trainer_paid + other_paid
+
+
+@frappe.whitelist()
+def card_revenue_collected(filters=None):
+    return {"value": _get_module_income_collected(), "fieldtype": "Currency"}
+
+
+@frappe.whitelist()
+def card_expenses_paid(filters=None):
+    return {"value": _get_module_expenses_paid(), "fieldtype": "Currency"}
+
+
+@frappe.whitelist()
+def card_net_profit(filters=None):
+    value = _get_module_income_collected() - _get_module_expenses_paid()
+    return {"value": value, "fieldtype": "Currency"}
+
+
+@frappe.whitelist()
+def card_confirmation_rate(filters=None):
+    summary = get_dashboard_data()["summary"]
+    return {"value": summary["confirmation_rate"], "fieldtype": "Percent"}
+
+
+@frappe.whitelist()
+def card_confirmed_events(filters=None):
+    summary = get_dashboard_data()["summary"]
+    return {"value": summary["confirmed_events"], "fieldtype": "Int"}
+
+
+@frappe.whitelist()
+def card_pending_events(filters=None):
+    summary = get_dashboard_data()["summary"]
+    return {"value": summary["pending_events"], "fieldtype": "Int"}
+
+
+@frappe.whitelist()
+def card_upcoming_events(filters=None):
+    summary = get_dashboard_data()["summary"]
+    return {"value": summary["upcoming_events"], "fieldtype": "Int"}
