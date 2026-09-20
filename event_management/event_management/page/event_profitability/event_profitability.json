@@ -12,7 +12,13 @@
    "role": "System Manager"
   },
   {
-   "role": "Event Manager"
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Auditor"
   }
  ],
  "standard": "Yes",

@@ -2,48 +2,61 @@ import frappe
 
 METHOD_PATH = "event_management.event_management.doctype.event_registration.event_registration"
 
+# document_type gates who can see each card: Frappe's own has_permission() for
+# a "Custom" Number Card checks whether the user can read this doctype, so
+# GL Entry (read-only to Accounts User/Accounts Manager/Auditor in stock
+# ERPNext) restricts the money cards to finance/accounting roles without
+# creating any new role. Event Registration (readable by anyone with access
+# to this module) keeps the operational cards visible to everyone.
 CARDS = [
     {
         "name": "Event CB - Revenue Collected",
         "label": "Revenue Collected",
         "method": f"{METHOD_PATH}.card_revenue_collected",
         "color": "#16a34a",
+        "document_type": "GL Entry",
     },
     {
         "name": "Event CB - Expenses Paid",
         "label": "Expenses Paid",
         "method": f"{METHOD_PATH}.card_expenses_paid",
         "color": "#d97706",
+        "document_type": "GL Entry",
     },
     {
         "name": "Event CB - Net Profit",
         "label": "Net Profit",
         "method": f"{METHOD_PATH}.card_net_profit",
         "color": "#1e3a8a",
+        "document_type": "GL Entry",
     },
     {
         "name": "Event CB - Confirmation Rate",
         "label": "Confirmation Rate",
         "method": f"{METHOD_PATH}.card_confirmation_rate",
         "color": "#3b82f6",
+        "document_type": "Event Registration",
     },
     {
         "name": "Event CB - Confirmed Events",
         "label": "Confirmed Events",
         "method": f"{METHOD_PATH}.card_confirmed_events",
         "color": "#16a34a",
+        "document_type": "Event Registration",
     },
     {
         "name": "Event CB - Pending Events",
         "label": "Pending Events",
         "method": f"{METHOD_PATH}.card_pending_events",
         "color": "#d97706",
+        "document_type": "Event Registration",
     },
     {
         "name": "Event CB - Upcoming Events",
         "label": "Upcoming Events (30 days)",
         "method": f"{METHOD_PATH}.card_upcoming_events",
         "color": "#8b5cf6",
+        "document_type": "Event Registration",
     },
 ]
 
@@ -62,6 +75,9 @@ def execute():
     try:
         for card in CARDS:
             if frappe.db.exists("Number Card", card["name"]):
+                # Re-run also fixes document_type on cards created before the
+                # finance-role restriction was added.
+                frappe.db.set_value("Number Card", card["name"], "document_type", card["document_type"])
                 continue
 
             doc = frappe.new_doc("Number Card")
@@ -69,7 +85,7 @@ def execute():
             doc.label = card["label"]
             doc.type = "Custom"
             doc.method = card["method"]
-            doc.document_type = "Event Registration"
+            doc.document_type = card["document_type"]
             doc.is_public = 1
             doc.show_percentage_stats = 0
             doc.color = card["color"]

@@ -77,7 +77,9 @@ frappe.ui.form.on('Event Registration', {
             }, __("Training Management"));
         }
 
-        if (frm.doc.docstatus === 1) {
+        const is_finance_user = frappe.user.has_role(['Accounts User', 'Accounts Manager', 'Auditor']);
+
+        if (frm.doc.docstatus === 1 && is_finance_user) {
             frm.add_custom_button(__('Create Sales Invoice'), function() {
                 frappe.model.open_mapped_doc({
                     method: 'event_management.event_management.doctype.event_registration.event_registration.make_sales_invoice',
