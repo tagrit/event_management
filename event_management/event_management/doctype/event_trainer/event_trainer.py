@@ -30,7 +30,7 @@ def _get_file_as_base64(file_url):
         return ""
 
 
-MAX_TRAINERS_PER_EVENT = 2
+MAX_TRAINERS_PER_EVENT = 3
 
 
 class EventTrainer(Document):
