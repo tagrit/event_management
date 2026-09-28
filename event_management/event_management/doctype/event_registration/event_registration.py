@@ -1424,14 +1424,25 @@ def send_ceo_summary_report():
     )
 
 
+def _hex_to_rgba(hex_color, alpha):
+    """Frappe's email CSS processor can't parse 8-digit hex-with-alpha colors
+    (e.g. #1e3a8a0d) - it silently drops the whole declaration. rgba() is the
+    safe, widely-supported equivalent for inline email styles."""
+    hex_color = hex_color.lstrip("#")
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
 def _build_ceo_report_html(data):
     s = data["summary"]
     f = data["financial"]
     profit_color = "#16a34a" if f["net_profit"] >= 0 else "#dc2626"
 
     def kpi_cell(label, value, color):
+        bg = _hex_to_rgba(color, 0.05)
+        border = _hex_to_rgba(color, 0.2)
         return f"""
-        <td style="padding: 16px; text-align: center; background: {color}0d; border: 1px solid {color}33; border-radius: 8px;">
+        <td style="padding: 16px; text-align: center; background: {bg}; border: 1px solid {border}; border-radius: 8px;">
             <div style="font-size: 20px; font-weight: 700; color: {color};">{value}</div>
             <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 4px;">{label}</div>
         </td>"""

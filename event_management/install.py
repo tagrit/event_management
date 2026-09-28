@@ -71,6 +71,19 @@ def after_migrate():
     already-installed site would silently lose workspace updates otherwise.
     """
     sync_event_management_workspace()
+    sync_scheduler_jobs()
+
+
+def sync_scheduler_jobs():
+    """Make sure every scheduler_events entry in hooks.py has a matching
+    Scheduled Job Type record. bench migrate normally does this on its own,
+    but a new scheduled function added and deployed without a full migrate
+    (e.g. a live file patch + reload-doc, rather than `bench migrate`) can
+    silently never get registered - the code runs fine, hooks.py is correct,
+    but the scheduler daemon has no record telling it the job exists."""
+    from frappe.core.doctype.scheduled_job_type.scheduled_job_type import sync_jobs
+
+    sync_jobs()
 
 
 def sync_event_management_workspace():
