@@ -79,9 +79,10 @@ class EventProfitability {
             ${this.render_header(d.event)}
             ${this.render_kpis(d)}
             <div class="ep-grid-2">
-                ${this.render_income(d.income, d.event.budgeted_revenue)}
+                ${this.render_income(d.income)}
                 ${this.render_expense_summary(d.expenses)}
             </div>
+            ${this.render_budget_comparison(d.event.budgeted_revenue, d.income.total_collected)}
             ${this.render_trainer_table(d.expenses.trainers.detail)}
             ${this.render_other_expenses(d.expenses.other)}
             ${this.render_net_profit_statement(d)}
@@ -130,21 +131,33 @@ class EventProfitability {
         </div>`;
     }
 
-    render_income(income, budgeted_revenue) {
-        const variance = income.total_collected - budgeted_revenue;
-        const variance_class = variance >= 0 ? 'ep-amount-pos' : 'ep-amount-neg';
+    render_income(income) {
         return `
         <div class="ep-card">
             <h4 class="ep-card-title"><i class="fa fa-arrow-down"></i> Income</h4>
             <table class="ep-table">
                 <tbody>
-                    <tr><td>Budgeted Revenue</td><td class="ep-num">${format_currency(budgeted_revenue, 'KES')}</td></tr>
                     <tr><td>Total Invoiced</td><td class="ep-num">${format_currency(income.total_invoiced, 'KES')}</td></tr>
                     <tr><td>Collected via Invoice</td><td class="ep-num">${format_currency(income.collected_via_invoice, 'KES')}</td></tr>
                     <tr><td>Collected Directly (no invoice)</td><td class="ep-num">${format_currency(income.collected_direct, 'KES')}</td></tr>
-                    <tr><td>Invoice Outstanding</td><td class="ep-num">${format_currency(income.invoice_outstanding, 'KES')}</td></tr>
                     <tr class="ep-row-total"><td><strong>Total Collected</strong></td><td class="ep-num"><strong>${format_currency(income.total_collected, 'KES')}</strong></td></tr>
-                    <tr><td>Variance vs Budget</td><td class="ep-num ${variance_class}">${variance >= 0 ? '+' : ''}${format_currency(variance, 'KES')}</td></tr>
+                    <tr><td>Amount Due</td><td class="ep-num ${income.amount_due > 0 ? 'ep-amount-neg' : ''}">${format_currency(income.amount_due, 'KES')}</td></tr>
+                </tbody>
+            </table>
+        </div>`;
+    }
+
+    render_budget_comparison(budgeted_revenue, total_collected) {
+        const variance = total_collected - budgeted_revenue;
+        const variance_class = variance >= 0 ? 'ep-amount-pos' : 'ep-amount-neg';
+        return `
+        <div class="ep-card">
+            <h4 class="ep-card-title"><i class="fa fa-balance-scale"></i> Budget vs Actual</h4>
+            <table class="ep-table">
+                <tbody>
+                    <tr><td>Budgeted Revenue</td><td class="ep-num">${format_currency(budgeted_revenue, 'KES')}</td></tr>
+                    <tr><td>Actual Collected</td><td class="ep-num">${format_currency(total_collected, 'KES')}</td></tr>
+                    <tr class="ep-row-total"><td><strong>Variance vs Budget</strong></td><td class="ep-num ${variance_class}"><strong>${variance >= 0 ? '+' : ''}${format_currency(variance, 'KES')}</strong></td></tr>
                 </tbody>
             </table>
         </div>`;

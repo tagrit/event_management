@@ -21,7 +21,7 @@ def get_columns():
         {"label": "Budgeted Revenue", "fieldname": "revenue", "fieldtype": "Currency", "width": 130},
         {"label": "Total Invoiced", "fieldname": "total_invoiced", "fieldtype": "Currency", "width": 130},
         {"label": "Income Collected", "fieldname": "income_collected", "fieldtype": "Currency", "width": 130},
-        {"label": "Invoice Outstanding", "fieldname": "invoice_outstanding", "fieldtype": "Currency", "width": 140},
+        {"label": "Amount Due", "fieldname": "amount_due", "fieldtype": "Currency", "width": 140},
         {"label": "Trainer Costs Paid", "fieldname": "trainer_paid", "fieldtype": "Currency", "width": 130},
         {"label": "Other Expenses Paid", "fieldname": "other_paid", "fieldtype": "Currency", "width": 140},
         {"label": "Total Expenses Paid", "fieldname": "total_expenses", "fieldtype": "Currency", "width": 140},
@@ -67,15 +67,13 @@ def get_data(filters):
     invoice_rows = frappe.db.sql("""
         SELECT event_registration,
             SUM(grand_total) as invoiced,
-            SUM(grand_total - outstanding_amount) as collected,
-            SUM(outstanding_amount) as outstanding
+            SUM(grand_total - outstanding_amount) as collected
         FROM `tabSales Invoice`
         WHERE docstatus = 1 AND event_registration IN %(names)s
         GROUP BY event_registration
     """, {"names": event_names}, as_dict=1)
     total_invoiced = {r.event_registration: flt(r.invoiced) for r in invoice_rows}
     income_via_invoice = {r.event_registration: flt(r.collected) for r in invoice_rows}
-    invoice_outstanding = {r.event_registration: flt(r.outstanding) for r in invoice_rows}
 
     income_direct = {
         r.event_registration: flt(r.total) for r in frappe.db.sql("""
@@ -119,7 +117,7 @@ def get_data(filters):
 
         event["total_invoiced"] = total_invoiced.get(event.name, 0)
         event["income_collected"] = income
-        event["invoice_outstanding"] = invoice_outstanding.get(event.name, 0)
+        event["amount_due"] = max(total_invoiced.get(event.name, 0) - income, 0)
         event["trainer_paid"] = t_paid
         event["other_paid"] = o_paid
         event["total_expenses"] = total_expenses

@@ -1215,6 +1215,14 @@ def get_event_financial_summary(event_registration_name):
 
     total_collected = collected_via_invoice + collected_direct
 
+    # What's still owed on the invoice, from the event's point of view - not
+    # just the Sales Invoice's own outstanding_amount, which only drops when
+    # a payment is formally reconciled against that specific invoice via a
+    # Payment Entry Reference. A payment "collected directly" (tagged to the
+    # event but never linked to the invoice) still counts against what's
+    # owed here even though the invoice itself doesn't know about it.
+    amount_due = max(total_invoiced - total_collected, 0)
+
     trainers = frappe.get_all(
         "Event Trainer",
         filters={"event_registration": event_registration_name},
@@ -1290,7 +1298,7 @@ def get_event_financial_summary(event_registration_name):
         },
         "income": {
             "total_invoiced": total_invoiced,
-            "invoice_outstanding": total_invoice_outstanding,
+            "amount_due": amount_due,
             "collected_via_invoice": collected_via_invoice,
             "collected_direct": collected_direct,
             "total_collected": total_collected,
