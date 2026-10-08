@@ -1,6 +1,8 @@
 import frappe
 from frappe.utils import flt
 
+from event_management.event_management.utils import get_expense_entry_totals_by_division
+
 
 def execute(filters=None):
     filters = frappe._dict(filters or {})
@@ -97,11 +99,13 @@ def get_data(filters):
         """, values, as_dict=1)
     }
 
+    expense_entry_paid = get_expense_entry_totals_by_division(where_clause, values)
+
     data = []
     for row in divisions:
         div = row.division
         collected = income.get(div, 0) + income_direct.get(div, 0)
-        expenses = trainer_paid.get(div, 0) + other_paid.get(div, 0)
+        expenses = trainer_paid.get(div, 0) + other_paid.get(div, 0) + expense_entry_paid.get(div, 0)
         net_profit = collected - expenses
 
         row["income_collected"] = collected

@@ -9,6 +9,12 @@ from frappe import _
 import os
 import re
 from event_management.event_management.schedule_utils import schedule_is_due
+from event_management.event_management.utils import (
+    expense_entry_installed,
+    get_event_expense_entry_breakdown,
+    get_event_expense_entry_total,
+    get_module_expense_entry_total,
+)
 
 
 def get_cc_email_list(settings):
@@ -1228,6 +1234,14 @@ def get_event_financial_summary(event_registration_name):
     other_total_billed = sum(flt(inv.grand_total) for inv in other_invoices)
     other_total_paid = sum(flt(inv.grand_total) - flt(inv.outstanding_amount) for inv in other_invoices)
 
+    expense_entries = []
+    if expense_entry_installed():
+        expense_entries = frappe.db.sql("""
+            SELECT name, payment_to, total
+            FROM `tabExpense Entry`
+            WHERE docstatus = 1 AND event_registration = %s
+        """, event_registration_name, as_dict=1)
+
     other_breakdown = frappe.db.sql("""
         SELECT
             COALESCE(pii.expense_account, 'Unspecified Account') as category,
@@ -1240,6 +1254,23 @@ def get_event_financial_summary(event_registration_name):
         GROUP BY category
         ORDER BY amount DESC
     """, event_registration_name, as_dict=1)
+
+    # Expense Entry is a second expense-booking path (journal_plus) - its
+    # full submitted total counts as both billed and paid, since it's a
+    # direct payment voucher with no separate invoice/payment step.
+    expense_entry_total = get_event_expense_entry_total(event_registration_name)
+    other_total_billed += expense_entry_total
+    other_total_paid += expense_entry_total
+
+    # Merge Expense Entry's own account breakdown into the same category list.
+    by_category = {row.category: flt(row.amount) for row in other_breakdown}
+    for row in get_event_expense_entry_breakdown(event_registration_name):
+        by_category[row.category] = by_category.get(row.category, 0) + flt(row.amount)
+    other_breakdown = sorted(
+        [{"category": k, "amount": v} for k, v in by_category.items()],
+        key=lambda r: r["amount"],
+        reverse=True,
+    )
 
     total_expenses_paid = trainer_paid + other_total_paid
     total_expenses_billed = trainer_contracted + other_total_billed
@@ -1275,6 +1306,8 @@ def get_event_financial_summary(event_registration_name):
                 "paid": other_total_paid,
                 "breakdown": other_breakdown,
                 "invoices": other_invoices,
+                "expense_entry_total": expense_entry_total,
+                "expense_entries": expense_entries,
             },
             "total_billed": total_expenses_billed,
             "total_paid": total_expenses_paid,
@@ -1323,7 +1356,9 @@ def _get_module_expenses_paid():
         AND (event_trainer IS NULL OR event_trainer = '')
     """)[0][0])
 
-    return trainer_paid + other_paid
+    expense_entry_paid = get_module_expense_entry_total()
+
+    return trainer_paid + other_paid + expense_entry_paid
 
 
 @frappe.whitelist()

@@ -203,11 +203,19 @@ class EventProfitability {
             </tr>
         `).join('') || '';
 
+        const expense_entry_rows = (other.expense_entries || []).map(ee => `
+            <tr>
+                <td><a href="/app/expense-entry/${ee.name}" target="_blank">${ee.name}</a></td>
+                <td>${ep_escape(ee.payment_to)}</td>
+                <td class="ep-num">${format_currency(ee.total, 'KES')}</td>
+            </tr>
+        `).join('') || '';
+
         return `
         <div class="ep-grid-2">
             <div class="ep-card">
                 <h4 class="ep-card-title"><i class="fa fa-tags"></i> Other Expenses by Account</h4>
-                <div class="ep-subtext" style="margin-bottom: 10px;">Hotel, delegate materials (bags/books/pens), and other non-trainer costs tagged to this event via Purchase Invoice, grouped by expense account.</div>
+                <div class="ep-subtext" style="margin-bottom: 10px;">Hotel, delegate materials (bags/books/pens), and other non-trainer costs tagged to this event via Purchase Invoice or Expense Entry, grouped by expense account.</div>
                 <table class="ep-table">
                     <thead><tr><th>Account</th><th>Amount</th></tr></thead>
                     <tbody>${category_rows}</tbody>
@@ -220,6 +228,12 @@ class EventProfitability {
                     <thead><tr><th>Invoice</th><th>Supplier</th><th>Total</th><th>Outstanding</th></tr></thead>
                     <tbody>${invoice_rows}</tbody>
                 </table>` : `<div class="ep-empty-row">No invoices yet.</div>`}
+                ${expense_entry_rows ? `
+                <h4 class="ep-card-title" style="margin-top: 18px;"><i class="fa fa-money"></i> Expense Entries</h4>
+                <table class="ep-table">
+                    <thead><tr><th>Entry</th><th>Payment To</th><th>Total</th></tr></thead>
+                    <tbody>${expense_entry_rows}</tbody>
+                </table>` : ''}
             </div>
         </div>`;
     }

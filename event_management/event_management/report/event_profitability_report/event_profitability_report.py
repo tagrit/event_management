@@ -1,6 +1,8 @@
 import frappe
 from frappe.utils import flt
 
+from event_management.event_management.utils import get_expense_entry_totals_by_event
+
 
 def execute(filters=None):
     filters = frappe._dict(filters or {})
@@ -99,11 +101,13 @@ def get_data(filters):
         """, {"names": event_names}, as_dict=1)
     }
 
+    expense_entry_paid = get_expense_entry_totals_by_event(event_names)
+
     data = []
     for event in events:
         income = income_via_invoice.get(event.name, 0) + income_direct.get(event.name, 0)
         t_paid = trainer_paid.get(event.name, 0)
-        o_paid = other_paid.get(event.name, 0)
+        o_paid = other_paid.get(event.name, 0) + expense_entry_paid.get(event.name, 0)
         total_expenses = t_paid + o_paid
         net_profit = income - total_expenses
 
