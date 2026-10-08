@@ -91,11 +91,19 @@ frappe.ui.form.on('Event Registration', {
                 show_record_payment_dialog(frm);
             }, __("Finance"));
 
-            frm.add_custom_button(__('Add Expense (Hotel/Gifts/Other)'), function() {
+            frm.add_custom_button(__('Add Expense Via Purchase PO (Hotel/Gifts/Other)'), function() {
                 frappe.new_doc('Purchase Invoice', {
                     event_registration: frm.doc.name
                 });
             }, __("Finance"));
+
+            if (frappe.model.can_create('Expense Entry')) {
+                frm.add_custom_button(__('Add Expense Via Expense Entry (Hotel/Gifts/Other)'), function() {
+                    frappe.new_doc('Expense Entry', {
+                        event_registration: frm.doc.name
+                    });
+                }, __("Finance"));
+            }
 
             frm.add_custom_button(__('View Profitability Report'), function() {
                 frappe.set_route('event-profitability', frm.doc.name);

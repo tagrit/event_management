@@ -15,6 +15,7 @@ def after_install():
     from event_management.patches import (
         add_event_finance_fields,
         add_event_trainer_linking_fields,
+        add_expense_entry_event_link,
         add_trainer_documents_field,
         add_trainer_management_fields,
         add_trainer_only_supplier_view,
@@ -46,6 +47,7 @@ def after_install():
         add_event_finance_fields,
         backfill_event_organization_customers,
         create_event_workspace_number_cards,
+        add_expense_entry_event_link,
     )
 
     for patch_module in patch_modules:
