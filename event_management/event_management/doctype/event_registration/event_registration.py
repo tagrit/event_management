@@ -973,6 +973,7 @@ def get_dashboard_data():
     financial = {
         "income_collected": _get_module_income_collected(),
         "expenses_paid": _get_module_expenses_paid(),
+        "expenses_owed": _get_module_expenses_owed(),
     }
     financial["net_profit"] = financial["income_collected"] - financial["expenses_paid"]
     financial["profit_margin"] = round(
@@ -1215,6 +1216,23 @@ def get_event_financial_summary(event_registration_name):
 
     total_collected = collected_via_invoice + collected_direct
 
+    # Source documents behind the income figures above, for the "list of
+    # documents that generated this report" audit trail.
+    income_invoices = frappe.db.sql("""
+        SELECT name, grand_total, outstanding_amount, posting_date
+        FROM `tabSales Invoice`
+        WHERE docstatus = 1 AND event_registration = %s
+        ORDER BY posting_date
+    """, event_registration_name, as_dict=1)
+
+    income_payments = frappe.db.sql("""
+        SELECT pe.name, pe.paid_amount, pe.mode_of_payment, pe.posting_date
+        FROM `tabPayment Entry` pe
+        WHERE pe.docstatus = 1 AND pe.payment_type = 'Receive' AND pe.event_registration = %s
+        AND NOT EXISTS (SELECT 1 FROM `tabPayment Entry Reference` per WHERE per.parent = pe.name)
+        ORDER BY pe.posting_date
+    """, event_registration_name, as_dict=1)
+
     # What's still owed on the invoice, from the event's point of view - not
     # just the Sales Invoice's own outstanding_amount, which only drops when
     # a payment is formally reconciled against that specific invoice via a
@@ -1231,6 +1249,23 @@ def get_event_financial_summary(event_registration_name):
     trainer_contracted = sum(flt(t.total_amount) for t in trainers)
     trainer_paid = sum(flt(t.paid_amount) for t in trainers)
 
+    trainer_invoices = frappe.db.sql("""
+        SELECT name, supplier_name, grand_total, outstanding_amount, event_trainer, posting_date
+        FROM `tabPurchase Invoice`
+        WHERE docstatus = 1 AND event_registration = %s
+        AND event_trainer IS NOT NULL AND event_trainer != ''
+        ORDER BY posting_date
+    """, event_registration_name, as_dict=1)
+
+    trainer_payments = frappe.db.sql("""
+        SELECT pe.name, pe.paid_amount, pe.mode_of_payment, pe.posting_date, pe.event_trainer
+        FROM `tabPayment Entry` pe
+        WHERE pe.docstatus = 1 AND pe.payment_type = 'Pay' AND pe.event_registration = %s
+        AND pe.event_trainer IS NOT NULL AND pe.event_trainer != ''
+        AND NOT EXISTS (SELECT 1 FROM `tabPayment Entry Reference` per WHERE per.parent = pe.name)
+        ORDER BY pe.posting_date
+    """, event_registration_name, as_dict=1)
+
     other_invoices = frappe.db.sql("""
         SELECT name, supplier_name, grand_total, outstanding_amount
         FROM `tabPurchase Invoice`
@@ -1240,7 +1275,36 @@ def get_event_financial_summary(event_registration_name):
     """, event_registration_name, as_dict=1)
 
     other_total_billed = sum(flt(inv.grand_total) for inv in other_invoices)
-    other_total_paid = sum(flt(inv.grand_total) - flt(inv.outstanding_amount) for inv in other_invoices)
+    other_paid_via_invoice = sum(flt(inv.grand_total) - flt(inv.outstanding_amount) for inv in other_invoices)
+
+    # A supplier paid with a standalone Payment Entry that was never formally
+    # allocated against its Purchase Invoice (via Payment Entry Reference)
+    # leaves that invoice's own outstanding_amount untouched, so it would
+    # otherwise look unpaid even though it was paid - same class of gap as
+    # the income side (collected_direct). Catches direct/unlinked payments
+    # to non-trainer suppliers too.
+    other_paid_direct = flt(frappe.db.sql("""
+        SELECT COALESCE(SUM(pe.paid_amount), 0)
+        FROM `tabPayment Entry` pe
+        WHERE pe.docstatus = 1
+        AND pe.payment_type = 'Pay'
+        AND pe.event_registration = %s
+        AND (pe.event_trainer IS NULL OR pe.event_trainer = '')
+        AND NOT EXISTS (
+            SELECT 1 FROM `tabPayment Entry Reference` per WHERE per.parent = pe.name
+        )
+    """, event_registration_name)[0][0] or 0)
+
+    other_total_paid = other_paid_via_invoice + other_paid_direct
+
+    other_payments = frappe.db.sql("""
+        SELECT pe.name, pe.paid_amount, pe.mode_of_payment, pe.posting_date
+        FROM `tabPayment Entry` pe
+        WHERE pe.docstatus = 1 AND pe.payment_type = 'Pay' AND pe.event_registration = %s
+        AND (pe.event_trainer IS NULL OR pe.event_trainer = '')
+        AND NOT EXISTS (SELECT 1 FROM `tabPayment Entry Reference` per WHERE per.parent = pe.name)
+        ORDER BY pe.posting_date
+    """, event_registration_name, as_dict=1)
 
     expense_entries = []
     if expense_entry_installed():
@@ -1270,6 +1334,8 @@ def get_event_financial_summary(event_registration_name):
     other_total_billed += expense_entry_total
     other_total_paid += expense_entry_total
 
+    other_amount_owed = max(other_total_billed - other_total_paid, 0)
+
     # Merge Expense Entry's own account breakdown into the same category list.
     by_category = {row.category: flt(row.amount) for row in other_breakdown}
     for row in get_event_expense_entry_breakdown(event_registration_name):
@@ -1279,6 +1345,9 @@ def get_event_financial_summary(event_registration_name):
         key=lambda r: r["amount"],
         reverse=True,
     )
+
+    trainer_amount_owed = max(trainer_contracted - trainer_paid, 0)
+    total_amount_owed = trainer_amount_owed + other_amount_owed
 
     total_expenses_paid = trainer_paid + other_total_paid
     total_expenses_billed = trainer_contracted + other_total_billed
@@ -1302,23 +1371,31 @@ def get_event_financial_summary(event_registration_name):
             "collected_via_invoice": collected_via_invoice,
             "collected_direct": collected_direct,
             "total_collected": total_collected,
+            "invoices": income_invoices,
+            "payments": income_payments,
         },
         "expenses": {
             "trainers": {
                 "contracted": trainer_contracted,
                 "paid": trainer_paid,
+                "amount_owed": trainer_amount_owed,
                 "detail": trainers,
+                "invoices": trainer_invoices,
+                "payments": trainer_payments,
             },
             "other": {
                 "billed": other_total_billed,
                 "paid": other_total_paid,
+                "amount_owed": other_amount_owed,
                 "breakdown": other_breakdown,
                 "invoices": other_invoices,
+                "payments": other_payments,
                 "expense_entry_total": expense_entry_total,
                 "expense_entries": expense_entries,
             },
             "total_billed": total_expenses_billed,
             "total_paid": total_expenses_paid,
+            "total_owed": total_amount_owed,
         },
         "net_profit": net_profit,
         "profit_margin": profit_margin,
@@ -1349,14 +1426,34 @@ def _get_module_income_collected():
     return via_invoice + direct
 
 
+def _get_module_expenses_billed():
+    """Total expenses booked across ALL events (trainers contracted + other
+    billed), regardless of whether they've been paid yet."""
+    trainer_billed = flt(frappe.db.sql("""
+        SELECT COALESCE(SUM(total_amount), 0) FROM `tabEvent Trainer`
+    """)[0][0])
+
+    other_billed = flt(frappe.db.sql("""
+        SELECT COALESCE(SUM(grand_total), 0)
+        FROM `tabPurchase Invoice`
+        WHERE docstatus = 1
+        AND event_registration IS NOT NULL AND event_registration != ''
+        AND (event_trainer IS NULL OR event_trainer = '')
+    """)[0][0])
+
+    return trainer_billed + other_billed + get_module_expense_entry_total()
+
+
 def _get_module_expenses_paid():
     """Actual expenses paid across ALL events (trainers + other), mirroring
-    get_event_financial_summary's expense side module-wide."""
+    get_event_financial_summary's expense side module-wide. Includes
+    suppliers paid via a standalone Payment Entry never formally allocated
+    against their Purchase Invoice, same as the per-event calculation."""
     trainer_paid = flt(frappe.db.sql("""
         SELECT COALESCE(SUM(paid_amount), 0) FROM `tabEvent Trainer`
     """)[0][0])
 
-    other_paid = flt(frappe.db.sql("""
+    other_paid_via_invoice = flt(frappe.db.sql("""
         SELECT COALESCE(SUM(grand_total - outstanding_amount), 0)
         FROM `tabPurchase Invoice`
         WHERE docstatus = 1
@@ -1364,9 +1461,27 @@ def _get_module_expenses_paid():
         AND (event_trainer IS NULL OR event_trainer = '')
     """)[0][0])
 
+    other_paid_direct = flt(frappe.db.sql("""
+        SELECT COALESCE(SUM(pe.paid_amount), 0)
+        FROM `tabPayment Entry` pe
+        WHERE pe.docstatus = 1
+        AND pe.payment_type = 'Pay'
+        AND pe.event_registration IS NOT NULL AND pe.event_registration != ''
+        AND (pe.event_trainer IS NULL OR pe.event_trainer = '')
+        AND NOT EXISTS (
+            SELECT 1 FROM `tabPayment Entry Reference` per WHERE per.parent = pe.name
+        )
+    """)[0][0])
+
     expense_entry_paid = get_module_expense_entry_total()
 
-    return trainer_paid + other_paid + expense_entry_paid
+    return trainer_paid + other_paid_via_invoice + other_paid_direct + expense_entry_paid
+
+
+def _get_module_expenses_owed():
+    """What's still owed to trainers/suppliers across ALL events - billed
+    minus actually paid, never negative."""
+    return max(_get_module_expenses_billed() - _get_module_expenses_paid(), 0)
 
 
 @frappe.whitelist()
@@ -1377,6 +1492,11 @@ def card_revenue_collected(filters=None):
 @frappe.whitelist()
 def card_expenses_paid(filters=None):
     return {"value": _get_module_expenses_paid(), "fieldtype": "Currency"}
+
+
+@frappe.whitelist()
+def card_expenses_owed(filters=None):
+    return {"value": _get_module_expenses_owed(), "fieldtype": "Currency"}
 
 
 @frappe.whitelist()

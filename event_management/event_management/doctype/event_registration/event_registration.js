@@ -108,6 +108,12 @@ frappe.ui.form.on('Event Registration', {
             frm.add_custom_button(__('View Profitability Report'), function() {
                 frappe.set_route('event-profitability', frm.doc.name);
             }, __("Finance"));
+
+            frm.add_custom_button(__('View Accounting Ledger'), function() {
+                frappe.set_route('query-report', 'Event Accounting Ledger', {
+                    event_registration: frm.doc.name
+                });
+            }, __("Finance"));
         }
     }
 });

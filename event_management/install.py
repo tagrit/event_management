@@ -16,6 +16,7 @@ def after_install():
         add_event_finance_fields,
         add_event_trainer_linking_fields,
         add_expense_entry_event_link,
+        add_expenses_owed_number_card,
         add_trainer_documents_field,
         add_trainer_management_fields,
         add_trainer_only_supplier_view,
@@ -50,6 +51,7 @@ def after_install():
         create_event_workspace_number_cards,
         add_expense_entry_event_link,
         fix_expense_entry_required_date_default,
+        add_expenses_owed_number_card,
     )
 
     for patch_module in patch_modules:

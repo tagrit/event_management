@@ -22,5 +22,6 @@
  event_management.patches.create_event_workspace_number_cards
  event_management.patches.add_expense_entry_event_link
  event_management.patches.fix_expense_entry_required_date_default
+ event_management.patches.add_expenses_owed_number_card
 
 

@@ -77,6 +77,31 @@ def get_event_expense_entry_breakdown(event_registration_name):
     """, event_registration_name, as_dict=1)
 
 
+def get_event_voucher_list(event_registration_name):
+    """Every accounting document (voucher_type, voucher_no) tagged to one
+    event - Sales Invoices, Purchase Invoices, Payment Entries (both
+    directions), and Expense Entries. GL Entry itself has no event_registration
+    field, so the Event Accounting Ledger report resolves this list first and
+    then pulls GL Entry rows whose (voucher_type, voucher_no) match it."""
+    vouchers = []
+
+    for doctype in ("Sales Invoice", "Purchase Invoice", "Payment Entry"):
+        names = frappe.db.sql_list(f"""
+            SELECT name FROM `tab{doctype}`
+            WHERE docstatus = 1 AND event_registration = %s
+        """, event_registration_name)
+        vouchers += [(doctype, name) for name in names]
+
+    if expense_entry_installed():
+        names = frappe.db.sql_list("""
+            SELECT name FROM `tabExpense Entry`
+            WHERE docstatus = 1 AND event_registration = %s
+        """, event_registration_name)
+        vouchers += [("Expense Entry", name) for name in names]
+
+    return vouchers
+
+
 def get_expense_entry_totals_by_division(division_where_clause, values):
     """Submitted Expense Entry totals grouped by the owning event's
     division - for Division Performance Report. division_where_clause/values

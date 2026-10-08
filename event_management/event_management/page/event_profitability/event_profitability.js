@@ -83,7 +83,8 @@ class EventProfitability {
                 ${this.render_expense_summary(d.expenses)}
             </div>
             ${this.render_budget_comparison(d.event.budgeted_revenue, d.income.total_collected)}
-            ${this.render_trainer_table(d.expenses.trainers.detail)}
+            ${this.render_income_documents(d.income)}
+            ${this.render_trainer_table(d.expenses.trainers.detail, d.expenses.trainers)}
             ${this.render_other_expenses(d.expenses.other)}
             ${this.render_net_profit_statement(d)}
         `);
@@ -91,6 +92,7 @@ class EventProfitability {
         this.page.clear_menu();
         this.page.clear_inner_toolbar();
         this.page.add_inner_button(__('Open Event'), () => frappe.set_route('Form', 'Event Registration', this.event_name));
+        this.page.add_inner_button(__('View Accounting Ledger'), () => frappe.set_route('query-report', 'Event Accounting Ledger', { event_registration: this.event_name }));
         this.page.add_inner_button(__('Print'), () => window.print());
     }
 
@@ -147,6 +149,44 @@ class EventProfitability {
         </div>`;
     }
 
+    render_income_documents(income) {
+        const invoice_rows = (income.invoices || []).map(inv => `
+            <tr>
+                <td><a href="/app/sales-invoice/${inv.name}" target="_blank">${inv.name}</a></td>
+                <td>${frappe.datetime.str_to_user(inv.posting_date)}</td>
+                <td class="ep-num">${format_currency(inv.grand_total, 'KES')}</td>
+                <td class="ep-num">${format_currency(inv.outstanding_amount, 'KES')}</td>
+            </tr>
+        `).join('') || `<tr><td colspan="4" class="ep-empty-row">No invoices raised for this event.</td></tr>`;
+
+        const payment_rows = (income.payments || []).map(p => `
+            <tr>
+                <td><a href="/app/payment-entry/${p.name}" target="_blank">${p.name}</a></td>
+                <td>${frappe.datetime.str_to_user(p.posting_date)}</td>
+                <td>${ep_escape(p.mode_of_payment)}</td>
+                <td class="ep-num">${format_currency(p.paid_amount, 'KES')}</td>
+            </tr>
+        `).join('') || `<tr><td colspan="4" class="ep-empty-row">No direct (unlinked) payments received for this event.</td></tr>`;
+
+        return `
+        <div class="ep-grid-2">
+            <div class="ep-card">
+                <h4 class="ep-card-title"><i class="fa fa-file-text-o"></i> Sales Invoices</h4>
+                <table class="ep-table">
+                    <thead><tr><th>Invoice</th><th>Date</th><th>Total</th><th>Outstanding</th></tr></thead>
+                    <tbody>${invoice_rows}</tbody>
+                </table>
+            </div>
+            <div class="ep-card">
+                <h4 class="ep-card-title"><i class="fa fa-money"></i> Direct Payments Received</h4>
+                <table class="ep-table">
+                    <thead><tr><th>Payment Entry</th><th>Date</th><th>Mode</th><th>Amount</th></tr></thead>
+                    <tbody>${payment_rows}</tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
     render_budget_comparison(budgeted_revenue, total_collected) {
         const variance = total_collected - budgeted_revenue;
         const variance_class = variance >= 0 ? 'ep-amount-pos' : 'ep-amount-neg';
@@ -171,15 +211,20 @@ class EventProfitability {
                 <tbody>
                     <tr><td>Trainer Costs (Contracted)</td><td class="ep-num">${format_currency(expenses.trainers.contracted, 'KES')}</td></tr>
                     <tr><td>Trainer Costs (Paid)</td><td class="ep-num">${format_currency(expenses.trainers.paid, 'KES')}</td></tr>
+                    <tr><td>Trainer Costs (Not Paid)</td><td class="ep-num ${expenses.trainers.amount_owed > 0 ? 'ep-amount-neg' : ''}">${format_currency(expenses.trainers.amount_owed, 'KES')}</td></tr>
                     <tr><td>Other Expenses (Billed)</td><td class="ep-num">${format_currency(expenses.other.billed, 'KES')}</td></tr>
                     <tr><td>Other Expenses (Paid)</td><td class="ep-num">${format_currency(expenses.other.paid, 'KES')}</td></tr>
+                    <tr><td>Other Expenses (Not Paid)</td><td class="ep-num ${expenses.other.amount_owed > 0 ? 'ep-amount-neg' : ''}">${format_currency(expenses.other.amount_owed, 'KES')}</td></tr>
+                    <tr class="ep-row-total"><td><strong>Total Expenses Billed</strong></td><td class="ep-num"><strong>${format_currency(expenses.total_billed, 'KES')}</strong></td></tr>
                     <tr class="ep-row-total"><td><strong>Total Expenses Paid</strong></td><td class="ep-num"><strong>${format_currency(expenses.total_paid, 'KES')}</strong></td></tr>
+                    <tr><td><strong>Total Not Paid (Owed to Suppliers)</strong></td><td class="ep-num ${expenses.total_owed > 0 ? 'ep-amount-neg' : ''}"><strong>${format_currency(expenses.total_owed, 'KES')}</strong></td></tr>
                 </tbody>
             </table>
         </div>`;
     }
 
-    render_trainer_table(trainers) {
+    render_trainer_table(trainers, trainer_expenses) {
+        trainer_expenses = trainer_expenses || {};
         const rows = (trainers || []).map(t => `
             <tr>
                 <td><a href="/app/event-trainer/${t.name}">${ep_escape(t.trainer_name)}</a></td>
@@ -189,6 +234,23 @@ class EventProfitability {
             </tr>
         `).join('') || `<tr><td colspan="4" class="ep-empty-row">No trainers assigned to this event.</td></tr>`;
 
+        const invoice_rows = (trainer_expenses.invoices || []).map(inv => `
+            <tr>
+                <td><a href="/app/purchase-invoice/${inv.name}" target="_blank">${inv.name}</a></td>
+                <td>${ep_escape(inv.supplier_name)}</td>
+                <td class="ep-num">${format_currency(inv.grand_total, 'KES')}</td>
+                <td class="ep-num">${format_currency(inv.outstanding_amount, 'KES')}</td>
+            </tr>
+        `).join('') || '';
+
+        const payment_rows = (trainer_expenses.payments || []).map(p => `
+            <tr>
+                <td><a href="/app/payment-entry/${p.name}" target="_blank">${p.name}</a></td>
+                <td>${frappe.datetime.str_to_user(p.posting_date)}</td>
+                <td class="ep-num">${format_currency(p.paid_amount, 'KES')}</td>
+            </tr>
+        `).join('') || '';
+
         return `
         <div class="ep-card">
             <h4 class="ep-card-title"><i class="fa fa-graduation-cap"></i> Trainer Costs</h4>
@@ -196,6 +258,18 @@ class EventProfitability {
                 <thead><tr><th>Trainer</th><th>Contracted</th><th>Paid</th><th>Status</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>
+            ${invoice_rows ? `
+            <h4 class="ep-card-title" style="margin-top: 18px;"><i class="fa fa-file-text-o"></i> Trainer Purchase Invoices</h4>
+            <table class="ep-table">
+                <thead><tr><th>Invoice</th><th>Supplier</th><th>Total</th><th>Outstanding</th></tr></thead>
+                <tbody>${invoice_rows}</tbody>
+            </table>` : ''}
+            ${payment_rows ? `
+            <h4 class="ep-card-title" style="margin-top: 18px;"><i class="fa fa-money"></i> Trainer Direct Payments</h4>
+            <table class="ep-table">
+                <thead><tr><th>Payment Entry</th><th>Date</th><th>Amount</th></tr></thead>
+                <tbody>${payment_rows}</tbody>
+            </table>` : ''}
         </div>`;
     }
 
@@ -224,6 +298,14 @@ class EventProfitability {
             </tr>
         `).join('') || '';
 
+        const payment_rows = (other.payments || []).map(p => `
+            <tr>
+                <td><a href="/app/payment-entry/${p.name}" target="_blank">${p.name}</a></td>
+                <td>${frappe.datetime.str_to_user(p.posting_date)}</td>
+                <td class="ep-num">${format_currency(p.paid_amount, 'KES')}</td>
+            </tr>
+        `).join('') || '';
+
         return `
         <div class="ep-grid-2">
             <div class="ep-card">
@@ -246,6 +328,12 @@ class EventProfitability {
                 <table class="ep-table">
                     <thead><tr><th>Entry</th><th>Payment To</th><th>Total</th></tr></thead>
                     <tbody>${expense_entry_rows}</tbody>
+                </table>` : ''}
+                ${payment_rows ? `
+                <h4 class="ep-card-title" style="margin-top: 18px;"><i class="fa fa-money"></i> Direct Payments (no invoice)</h4>
+                <table class="ep-table">
+                    <thead><tr><th>Payment Entry</th><th>Date</th><th>Amount</th></tr></thead>
+                    <tbody>${payment_rows}</tbody>
                 </table>` : ''}
             </div>
         </div>`;
