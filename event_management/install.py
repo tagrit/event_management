@@ -27,6 +27,7 @@ def after_install():
         create_registration_confirmation_email_template,
         create_welcome_email_template,
         drop_event_name_unique_index,
+        fix_expense_entry_required_date_default,
         increase_max_upload_file_size,
         reorder_trainer_fields_after_supplier_name,
     )
@@ -48,6 +49,7 @@ def after_install():
         backfill_event_organization_customers,
         create_event_workspace_number_cards,
         add_expense_entry_event_link,
+        fix_expense_entry_required_date_default,
     )
 
     for patch_module in patch_modules:

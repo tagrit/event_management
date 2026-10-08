@@ -21,5 +21,6 @@
  event_management.patches.backfill_event_organization_customers
  event_management.patches.create_event_workspace_number_cards
  event_management.patches.add_expense_entry_event_link
+ event_management.patches.fix_expense_entry_required_date_default
 
 
